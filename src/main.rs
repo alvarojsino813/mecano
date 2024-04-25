@@ -1,9 +1,9 @@
-use std::io::{self, Read};
-use std::fs::File;
+use std::io;
+use termion::raw::IntoRawMode;
 use termion::input::TermRead;
 use termion::event::Key;
 use termion;
-use state::State;
+use mecano::Mecano;
 
 mod state;
 mod config;
@@ -12,20 +12,15 @@ mod dictionary;
 
 fn main() -> io::Result<()> {
 
-    let mut file = File::open("example.txt")?;
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
-    let mut state = State::start(contents.as_str()).unwrap();
     let stdin = io::stdin();
+    let mut mecano = Mecano::start("100_spanish").unwrap();
 
     for key in stdin.keys() {
         if let Ok(Key::Esc) = key {
             break;
         } else {
-            let _ = state.type_key(key.unwrap());
+            mecano.type_key(key.unwrap())?;
         }
-
-
     }
 
     println!("{}\r", termion::clear::All);

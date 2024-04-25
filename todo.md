@@ -10,11 +10,12 @@
 - [ ] Pensar un diseño, para cuadrar márgenes y demás
 - [ ] Empty descuadra todo en función del ancho de la terminal
 - [ ] Cuando la líneas es más larga que el ancho se descuadra todo
-- [ ] Diseño adaptable al tamaño de la terminal
+- [-] Diseño adaptable al tamaño de la terminal
+    - [X] Diseño adaptable al iniciar el programa
 - [ ] Crear un thread que revise el tamaño de la terminal para redibujar en caso necesario
 
 ## Dictionary
-- [ ] La manera de gestionar la memoria de los Strings es poco eficiente aunque funcione.
+- [X] La manera de gestionar la memoria de los Strings es poco eficiente aunque funcione.
         Tiene mucha redundancia
 
 ## Otros
@@ -32,10 +33,13 @@
 ## Bugs
 - [X] `is_typed_corrected()`: No usar slices, ya que corta caracteres de >1 byte
 - [X] Los caracteres que modifican el siguiente caracter, pero que no imprimen nada, desajustan los offsets
-- [ ] Tratar desbordes!
+- [-] Tratar desbordes!
     - [ ] Para la información de debug cortar lo sobrante
-    - [ ] Para las líneas debo tratarlo de otra forma
-        
+    - [X] Para las líneas debo tratarlo de otra forma
+- [ ] Al salir de la terminal, sigue en raw mode, por lo que queda inutilizable
+- [ ] Cuando el ancho es inferior al width interno, panic
+- [ ] Se pierden todos los highlight y colores al redibujar
+
 
 ## Hoja de ruta
 

@@ -29,7 +29,7 @@ impl Dictionary {
         while width <= max_width {
             let rand_word = self.possible_words
                 [random(self.possible_words.len() - 1)].as_str();
-            width += rand_word.chars().count() as u16;
+            width += rand_word.chars().count() as u16 + 1;
             words_yielded.push(rand_word.to_string());
         }
 
