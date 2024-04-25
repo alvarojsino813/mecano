@@ -6,6 +6,8 @@ use termion;
 use state::State;
 
 mod state;
+mod config;
+mod mecano;
 mod dictionary;
 
 fn main() -> io::Result<()> {
@@ -13,38 +15,19 @@ fn main() -> io::Result<()> {
     let mut file = File::open("example.txt")?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
-    println!("{}", termion::clear::All);
     let mut state = State::start(contents.as_str()).unwrap();
     let stdin = io::stdin();
-    state.print_debug()?;
 
     for key in stdin.keys() {
-        match key? {
-            Key::Char(c) => {
-                state.type_char(c)?;
-            },
-
-            Key::Esc => break,
-
-            Key::Insert =>  {
-                state.next_word()?;
-            }
-
-            Key::Backspace => {
-                state.backspace()?;
-            }
-
-            _ => (),
+        if let Ok(Key::Esc) = key {
+            break;
+        } else {
+            let _ = state.type_key(key.unwrap());
         }
 
-        state.print_debug()?;
 
     }
 
-    println!("\n\r");
-    println!("\n\r");
-    println!("\n\r");
-    println!("\n\r");
-    println!("\n\r");
+    println!("{}\r", termion::clear::All);
     return Ok(());
 }
