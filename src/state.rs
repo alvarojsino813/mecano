@@ -1,28 +1,30 @@
-use std::io::{self, Stdout, Write};
-use termion::color;
-use termion::cursor;
-use termion::event::Key;
-use termion::raw::IntoRawMode;
+use std::{fmt::Display, io::{self, Stdout, Write}};
+use crossterm::{
+    cursor::{Hide, MoveDown, MoveLeft, MoveRight, MoveTo, MoveToColumn, MoveToNextLine, MoveUp}, 
+    event::{KeyCode, KeyEvent, KeyModifiers},
+    execute,
+    queue,
+    style::{Color, SetBackgroundColor, SetForegroundColor},
+    terminal::{Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen}};
 use dictionary::Dictionary;
-
 use crate::config::Config;
 use crate::dictionary;
 
-struct TermInfo {
+struct BoxInfo {
     left_padding : u16,
     top_padding : u16,
     width : u16,
     size : (u16, u16),
 }
 
-impl TermInfo {
-    pub fn centered() -> TermInfo {
-        let size = termion::terminal_size().unwrap();
-        let width = 40;
+impl BoxInfo {
+    pub fn centered() -> BoxInfo {
+        let size = crossterm::terminal::size().unwrap();
+        let width = 70;
         let left_padding = (size.0 - width) / 2;
         let top_padding = (size.1 - 4) / 2;
 
-        TermInfo {
+        BoxInfo {
             left_padding,
             top_padding,
             width,
@@ -31,21 +33,32 @@ impl TermInfo {
     }
 }
 
+#[derive(Clone, Copy)]
+enum WordState {
+    Correct,
+    Wrong,
+    Selected,
+    TypingWrong,
+    Unreached,
+}
+
 pub struct State {
-    stdout : termion::raw::RawTerminal<Stdout>,
+    stdout : Stdout,
     actual_offset : u16,
     input_offset : u16,
     word_offset: u16,
     typed_word : String,
     actual_line : Vec<String>,
+    actual_word_state : Vec<WordState>,
     second_line : Vec<String>,
     nth_word : usize,
     n_total_words : usize,
     n_correct_words : usize,
     n_lines : usize,
     dict : Dictionary,
-    term_info : TermInfo,
+    box_info : BoxInfo,
     config : Config,
+    end : bool
 }
 
 impl State {
@@ -53,13 +66,14 @@ impl State {
         // TODO: permitir contents vacios y con varias lineas
         let dict = Dictionary::new(path_to_dict);
 
-        let term_info = TermInfo::centered();
+        let term_info = BoxInfo::centered();
         let actual_offset = term_info.left_padding;
         let input_offset = term_info.left_padding;
         let word_offset = term_info.left_padding;
+        let mut stdout = io::stdout();
 
-        print!("{}", termion::clear::All);
-        let stdout = io::stdout().into_raw_mode()?;
+        let _ = crossterm::terminal::enable_raw_mode();
+        let _ = execute!(stdout, EnterAlternateScreen);
 
         let mut state : State = State {
             stdout,
@@ -67,6 +81,7 @@ impl State {
             typed_word : String::new(),
             actual_line : Vec::new(),
             second_line : Vec::new(),
+            actual_word_state : Vec::new(),
             nth_word : 0,
             actual_offset,
             input_offset,
@@ -74,58 +89,77 @@ impl State {
             n_total_words : 0,
             n_correct_words : 0,
             n_lines : 0,
-            term_info,
+            box_info: term_info,
+            end : false,
             config : Config::default(),
         };
 
         state.next_line()?;
         state.next_line()?;
 
-        state.draw()?;
+        state.draw_dict_mode()?;
 
         state.highlight_actual_word(state.get_bg_selected())?;
-        state.stdout.lock().flush()?;
+        state.stdout.flush()?;
 
 
         return Ok(state);
     }
 
-    pub fn draw(&mut self) -> io::Result<()> {
-        write!(self.stdout.lock(), "{}", termion::clear::All)?;
+    pub fn draw_dict_mode(&mut self) -> io::Result<()> {
 
-        self.input_offset -= self.term_info.left_padding;
-        self.word_offset -= self.term_info.left_padding;
-        self.actual_offset -= self.term_info.left_padding;
-        self.term_info = TermInfo::centered();
-        self.input_offset += self.term_info.left_padding;
-        self.word_offset += self.term_info.left_padding;
-        self.actual_offset += self.term_info.left_padding;
+        self.input_offset -= self.box_info.left_padding;
+        self.word_offset -= self.box_info.left_padding;
+        self.actual_offset -= self.box_info.left_padding;
+        self.box_info = BoxInfo::centered();
+        self.input_offset += self.box_info.left_padding;
+        self.word_offset += self.box_info.left_padding;
+        self.actual_offset += self.box_info.left_padding;
 
-        self.stdout.lock().flush()?;
-
-        let string = "-".repeat(self.term_info.size.0 as usize);
-        write!(self.stdout.lock(), "{}{}", termion::cursor::Goto(1, 1), string)?;
+        queue!(self.stdout, Clear(ClearType::All))?;
+        self.draw_box()?;
         self.print_lines()?;
+        self.stdout.flush()?;
+        return Ok(());
+    }
+    pub fn draw_punct(&mut self) -> io::Result<()> {
+
+        self.box_info = BoxInfo::centered();
+
+        queue!(self.stdout, Clear(ClearType::All))?;
+        self.draw_box()?;
+        queue!(self.stdout, MoveTo(self.box_info.size.0 / 2, self.box_info.size.1 / 2))?;
+        write!(self.stdout, "WPM: {}", self.n_total_words)?;
+        self.stdout.flush()?;
         return Ok(());
     }
 
-    pub fn type_key(&mut self, key : Key) -> io::Result<()> {
-        match key {
-            Key::Char(c) => {
+    pub fn type_key_event(&mut self, key : KeyEvent) -> io::Result<()> {
+        if self.end { return Ok(()); }
+        let shift = KeyModifiers::from_name("SHIFT").unwrap();
+        let none = KeyModifiers::empty();
+        if key.modifiers != shift &&
+        key.modifiers != none { return Ok(()); }
+        match key.code {
+            KeyCode::Char(c) => {
                 self.type_char(c)?;
             },
 
-            Key::Backspace => {
+            KeyCode::Backspace => {
                 self.backspace()?;
-            }
+            },
 
             _ => (),
         }
         return Ok(());
     }
 
+    pub fn end(&mut self) {
+        self.end = true;
+    }
+
     pub fn get_size(&self) -> (u16, u16) {
-        return self.term_info.size;
+        return self.box_info.size;
     }
 
     fn type_char(&mut self, c : char) -> io::Result<()> {
@@ -137,25 +171,29 @@ impl State {
             self.actual_offset += 1;
             self.input_offset += 1;
 
-            write!(self.stdout.lock(), "{}", c)?;
+            write!(self.stdout, "{}", c)?;
             if self.is_typed_correct() {
                 self.highlight_actual_word(self.get_bg_selected())?;
+                self.actual_word_state[self.nth_word] = WordState::Selected;
             } else {
                 self.highlight_actual_word(self.get_bg_wrong())?;
+                self.actual_word_state[self.nth_word] = WordState::TypingWrong;
             }
         } else {
 
             self.typed_word.push(c);
         }
 
-        self.stdout.lock().flush()?;
+        self.stdout.flush()?;
         return Ok(());
     }
 
     fn backspace(&mut self) -> io::Result<()> {
-        write!(self.stdout.lock(), "{} {}", cursor::Left(1), cursor::Left(1))?;
-        if self.actual_offset > self.term_info.left_padding &&
-        self.input_offset > self.term_info.left_padding {
+        queue!(self.stdout, MoveLeft(1))?;
+        write!(self.stdout, " ")?;
+        queue!(self.stdout, MoveLeft(1))?;
+        if self.actual_offset > self.box_info.left_padding &&
+        self.input_offset > self.box_info.left_padding {
             self.actual_offset -= 1;
             self.input_offset -= 1;
             self.typed_word.pop();
@@ -165,13 +203,13 @@ impl State {
         } else {
             self.highlight_actual_word(self.get_bg_wrong())?;
         }
-        self.stdout.lock().flush()?;
+        self.stdout.flush()?;
         return Ok(());
     }
 
     fn is_typed_correct(&self) -> bool {
         return if 
-        self.input_offset as usize - self.term_info.left_padding as usize
+        self.input_offset as usize - self.box_info.left_padding as usize
         <= 
         self.get_actual_word().len() {
             let mut actual_chars = self.get_actual_word().chars();
@@ -181,23 +219,23 @@ impl State {
         }
     }
 
-
-
     fn next_word(&mut self) -> io::Result<()> {
         if self.nth_word + 1 >= self.actual_line.len() {
             self.next_line()?;
-            self.nth_word = 0;
         } else {
             if self.get_actual_word() == &self.typed_word {
                 self.n_correct_words += 1;
+                self.actual_word_state[self.nth_word] = WordState::Correct;
                 self.color_actual_word(self.get_fg_correct())?;
             } else {
+                self.actual_word_state[self.nth_word] = WordState::Wrong;
                 self.color_actual_word(self.get_fg_wrong())?;
             }
             self.word_offset += self.get_actual_word().chars().count() as u16 + 1;
             self.nth_word += 1; 
+            self.actual_word_state[self.nth_word] = WordState::Selected;
             self.actual_offset += 1;
-            self.input_offset = self.term_info.left_padding;
+            self.input_offset = self.box_info.left_padding;
         }
 
         self.highlight_actual_word(self.get_bg_selected())?;
@@ -212,11 +250,16 @@ impl State {
 
     fn next_line(&mut self) -> io::Result<()> {
         self.actual_line = self.second_line.to_owned();
-        self.second_line = self.dict.yield_words(self.term_info.width);
+        self.second_line = self.dict.yield_words(self.box_info.width);
 
-        self.word_offset = self.term_info.left_padding;
-        self.input_offset = self.term_info.left_padding;
+        self.actual_word_state = vec![WordState::Selected];
+        self.actual_word_state
+            .append(&mut vec![WordState::Unreached; self.actual_line.len()]);
+
+        self.word_offset = self.box_info.left_padding;
+        self.input_offset = self.box_info.left_padding;
         self.n_lines += 1;
+        self.nth_word = 0;
 
         self.print_lines()?;
         return Ok(());
@@ -224,40 +267,103 @@ impl State {
 
 
     fn print_lines(&mut self) -> io::Result<()> {
-        write!(self.stdout.lock(), "{}",
-            cursor::Goto(self.term_info.left_padding, self.term_info.top_padding))?;
+        queue!(self.stdout,
+            MoveTo(self.box_info.left_padding, self.box_info.top_padding))?;
         self.print_empty_width()?;
         self.go_to_left_pad()?;
-        write!(self.stdout.lock(), "{}\r", vec_to_str(&self.actual_line))?;
+        for (word, state) in self.actual_line
+            .iter().zip(self.actual_word_state.iter()) {
 
-        write!(self.stdout.lock(), "{}", cursor::Down(1))?;
+            match state {
+                WordState::Correct => {
+                    queue!(self.stdout, 
+                        SetForegroundColor(self.config.get_fg_correct()))?;
+                    write!(self.stdout, "{}", word)?;
+                    queue!(self.stdout, 
+                        SetForegroundColor(Color::Reset))?;
+                    write!(self.stdout, " ")?;
+                },
+                WordState::Wrong => {
+                    queue!(self.stdout, 
+                        SetForegroundColor(self.config.get_fg_wrong()))?;
+                    write!(self.stdout, "{}", word)?;
+                    queue!(self.stdout, 
+                        SetForegroundColor(Color::Reset))?;
+                    write!(self.stdout, " ")?;
+                },
+                WordState::Selected => {
+                    queue!(self.stdout, 
+                        SetBackgroundColor(self.config.get_bg_selected()))?;
+                    write!(self.stdout, "{}", word)?;
+                    queue!(self.stdout, 
+                        SetBackgroundColor(Color::Reset))?;
+                    write!(self.stdout, " ")?;
+                },
+                WordState::TypingWrong => {
+                    queue!(self.stdout, 
+                        SetBackgroundColor(self.config.get_bg_selected()))?;
+                    write!(self.stdout, "{}", word)?;
+                    queue!(self.stdout, 
+                        SetBackgroundColor(Color::Reset))?;
+                    write!(self.stdout, " ")?;
+                },
+                WordState::Unreached => {
+                    write!(self.stdout, "{} ", word)?;
+                }
+            }
+        }
+
+        queue!(self.stdout, MoveDown(1))?;
         self.print_empty_width()?;
         self.go_to_left_pad()?;
-        write!(self.stdout.lock(), "{}\r", vec_to_str(&self.second_line))?;
+        write!(self.stdout, "{}\r", vec_to_str(&self.second_line))?;
 
-        write!(self.stdout.lock(), "{}", cursor::Down(2))?;
+        queue!(self.stdout, MoveDown(2))?;
         self.go_to_input_offset()?;
-        self.stdout.lock().flush()?;
         return Ok(());
     }
 
-    fn highlight_actual_word(&mut self, color : color::Rgb) -> io::Result<()> {
+    fn draw_box(&mut self) -> io::Result<()> {
+        let mut string = String::from("┏");
+        string.push_str("━".repeat(self.box_info.size.0 as usize - 2).as_str());
+        string.push('┓');
+        queue!(self.stdout, MoveTo(0, 0))?;
+        write!(self.stdout, "{}", string)?;
 
-        write!(self.stdout.lock(), "\r{}{}\r",
-            cursor::Up(3),
-            color::Bg(color),
+        for _row in 2 .. self.box_info.size.0 {
+            write!(self.stdout, "┃")?;
+            queue!(self.stdout, MoveToColumn(self.box_info.size.0))?;
+            write!(self.stdout, "┃")?;
+            queue!(self.stdout, MoveToNextLine(1))?;
+        }
+
+        let mut string = String::from("┗");
+        string.push_str("━".repeat(self.box_info.size.0 as usize - 2).as_str());
+        string.push('┛');
+        write!(self.stdout, "{}", string)?;
+        return Ok(());
+    }
+
+    fn highlight_actual_word(&mut self, color : Color) -> io::Result<()> {
+
+        queue!(self.stdout,
+            MoveToColumn(0),
+            MoveUp(3),
+            SetBackgroundColor(color),
+            MoveToColumn(0)
         )?;
 
         self.go_to_left_pad()?;
-        let pad = self.word_offset as i32 - self.term_info.left_padding as i32;
+        let pad = self.word_offset as i32 - self.box_info.left_padding as i32;
         if pad > 0 {
-            write!(self.stdout.lock(), "{}", cursor::Right(pad as u16))?;
+            write!(self.stdout, "{}", MoveRight(pad as u16))?;
         }
 
-        write!(self.stdout.lock(), "{}{}{}\r",
-            self.actual_line[self.nth_word],
-            cursor::Down(3),
-            color::Bg(color::Reset),
+        write!(self.stdout, "{}", self.actual_line[self.nth_word])?;
+        queue!(self.stdout, 
+            MoveDown(3),
+            SetBackgroundColor(Color::Reset),
+            MoveToColumn(0)
         )?;
 
         self.go_to_input_offset()?;
@@ -265,22 +371,25 @@ impl State {
         return Ok(());
     }
 
-    fn color_actual_word(&mut self, color : color::Rgb) -> io::Result<()> {
-        write!(self.stdout.lock(), "\r{}{}\r",
-            cursor::Up(3),
-            color::Fg(color),
+    fn color_actual_word(&mut self, color : Color) -> io::Result<()> {
+        queue!(self.stdout,
+            MoveToColumn(0),
+            MoveUp(3),
+            SetForegroundColor(color),
+            MoveToColumn(0)
         )?;
 
         self.go_to_left_pad()?;
-        let pad = self.word_offset as i32 - self.term_info.left_padding as i32;
+        let pad = self.word_offset as i32 - self.box_info.left_padding as i32;
         if pad > 0 {
-            write!(self.stdout.lock(), "{}", cursor::Right(pad as u16))?;
+            write!(self.stdout, "{}", MoveRight(pad as u16))?;
         }
 
-        write!(self.stdout.lock(), "{}{}{}\r",
-            self.actual_line[self.nth_word],
-            cursor::Down(3),
-            color::Fg(color::Reset),
+        write!(self.stdout, "{}", self.actual_line[self.nth_word])?;
+        queue!(self.stdout, 
+            MoveDown(3),
+            SetForegroundColor(Color::Reset),
+            MoveToColumn(0)
         )?;
 
         self.go_to_input_offset()?;
@@ -289,23 +398,26 @@ impl State {
     }
 
     fn go_to_left_pad(&mut self) -> io::Result<()> {
-        write!(self.stdout.lock(), "\r")?;
-        if self.term_info.left_padding > 0 {
-            write!(self.stdout.lock(), "{}", cursor::Right(self.term_info.left_padding))?;
+        write!(self.stdout, "\r")?;
+        if self.box_info.left_padding > 0 {
+            write!(self.stdout, "{}", MoveRight(self.box_info.left_padding))?;
         }
         return Ok(());
     }
 
     fn go_to_input_offset(&mut self) -> io::Result<()> {
-        write!(self.stdout.lock(), "\r")?;
+        write!(self.stdout, "\r")?;
         if self.input_offset > 0 {
-            write!(self.stdout.lock(), "{}", cursor::Right(self.input_offset))?;
+            write!(self.stdout, "{}", MoveRight(self.input_offset))?;
         }
         return Ok(());
     }
 
     fn print_empty_width(&mut self) -> io::Result<()> {
-        write!(self.stdout.lock(), "{}", termion::clear::UntilNewline)?;
+        queue!(self.stdout, MoveToColumn(2))?; 
+        let empty = " ".repeat(self.box_info.size.0 as usize - 3);
+        write!(self.stdout, "{}", empty)?;
+        self.stdout.flush()?;
         Ok(())
     }
 
@@ -313,19 +425,19 @@ impl State {
         return &self.actual_line[self.nth_word];
     }
 
-    fn get_bg_selected(&self) -> color::Rgb {
+    fn get_bg_selected(&self) -> Color {
         return self.config.get_bg_selected()
     }
 
-    fn get_bg_wrong(&self) -> color::Rgb {
+    fn get_bg_wrong(&self) -> Color {
         return self.config.get_bg_wrong();
     }
 
-    fn get_fg_wrong(&self) -> color::Rgb {
+    fn get_fg_wrong(&self) -> Color {
         return self.config.get_fg_wrong();
     }
 
-    fn get_fg_correct(&self) -> color::Rgb {
+    fn get_fg_correct(&self) -> Color {
         return self.config.get_fg_correct();
     }
 
@@ -369,19 +481,27 @@ impl State {
             empty, self.actual_line.len()).as_str());
 
         if self.input_offset == 0 {
-            write!(self.stdout.lock(), "{}{}{}\r",
-                cursor::Down(2),
+            write!(self.stdout, "{}{}{}\r",
+                MoveDown(2),
                 debug_info,
-                cursor::Up(debug_info.lines().count() as u16 + 2))?;
+                MoveUp(debug_info.lines().count() as u16 + 2))?;
         } else {
-            write!(self.stdout.lock(), "{}{}{}\r{}",
-                cursor::Down(2),
+            write!(self.stdout, "{}{}{}\r{}",
+                MoveDown(2),
                 debug_info,
-                cursor::Up(debug_info.lines().count() as u16 + 2),
-                cursor::Right(self.input_offset))?;
+                MoveUp(debug_info.lines().count() as u16 + 2),
+                MoveRight(self.input_offset))?;
         }
-        self.stdout.lock().flush()?;
+        self.stdout.flush()?;
         return Ok(());
+    }
+}
+
+impl Drop for State {
+    fn drop (&mut self) {
+        let _ = crossterm::terminal::disable_raw_mode();
+        let _ = execute!(self.stdout, Clear(ClearType::All));
+        let _ = execute!(self.stdout, LeaveAlternateScreen);
     }
 }
 

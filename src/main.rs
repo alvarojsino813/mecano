@@ -1,8 +1,10 @@
 use std::io;
-use termion::raw::IntoRawMode;
-use termion::input::TermRead;
-use termion::event::Key;
-use termion;
+use std::time::Duration;
+use crossterm::event::poll;
+use crossterm::event::Event;
+use crossterm::event::read;
+
+use crossterm::event::KeyCode;
 use mecano::Mecano;
 
 mod state;
@@ -12,17 +14,22 @@ mod dictionary;
 
 fn main() -> io::Result<()> {
 
-    let stdin = io::stdin();
     let mut mecano = Mecano::start("100_spanish").unwrap();
 
-    for key in stdin.keys() {
-        if let Ok(Key::Esc) = key {
-            break;
-        } else {
-            mecano.type_key(key.unwrap())?;
+    while !mecano.is_ended() {
+        if let Ok(true) = poll(Duration::from_secs(0)) { break; }
+        if let Ok(event) = read() {
+            if let Event::Key(key_event) = event {
+                match key_event.code {
+                    KeyCode::Esc => {
+                        break;
+                    },
+                    _ => {
+                        mecano.type_key_event(key_event)?
+                    }
+                }
+            }
         }
     }
-
-    println!("{}\r", termion::clear::All);
     return Ok(());
 }

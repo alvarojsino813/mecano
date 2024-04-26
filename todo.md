@@ -1,34 +1,38 @@
-## Cosas que hacer
-- [X] Al borrar, marcar en gris si es correcto
-- [X] Al escribir una palabra incorrecta, y escribir un caracter correcto, se marca como seleccionado y no como rojo
-- [X] Utilizar líneas
-- [ ] Mostrar wpm al acabar líneas
-- [ ] Tests para ver que state no crashea en ningún momento
-- [ ] Tests para ver como realiza una prueba que sea siempre igual. Con todos los carácteres UTF-8
-
 ## Aesthetics
 - [ ] Pensar un diseño, para cuadrar márgenes y demás
-- [ ] Empty descuadra todo en función del ancho de la terminal
+- [X] Empty descuadra todo en función del ancho de la terminal
 - [ ] Cuando la líneas es más larga que el ancho se descuadra todo
-- [-] Diseño adaptable al tamaño de la terminal
+- [X] Diseño adaptable al tamaño de la terminal
     - [X] Diseño adaptable al iniciar el programa
-- [ ] Crear un thread que revise el tamaño de la terminal para redibujar en caso necesario
+- [X] Crear un thread que revise el tamaño de la terminal para redibujar en caso necesario
+- [ ] Añadir colores personalizables a los bordes
+- [ ] Permitir imprimir según qué bordes
 
 ## Dictionary
 - [X] La manera de gestionar la memoria de los Strings es poco eficiente aunque funcione.
         Tiene mucha redundancia
 
-## Otros
-- [ ] Para poder actualizar la pantalla, es necesario una nueva estructura, para cambiar el estado
+## Cosas que hacer
+- [X] Al borrar, marcar en gris si es correcto
+- [X] Al escribir una palabra incorrecta, y escribir un caracter correcto, se marca como seleccionado y no como rojo
+- [X] Utilizar líneas
+- [X] Mostrar wpm al acabar líneas
+- [ ] Tests para ver que state no crashea en ningún momento
+- [ ] Tests para ver como realiza una prueba que sea siempre igual. Con todos los carácteres UTF-8
+- [X] Para poder actualizar la pantalla, es necesario una nueva estructura, para cambiar el estado
       desde diferentes hilos sin afectar demasiado la implementación del main.
 
       struct Game {
         Mutex<State>,
       }
-
       Además es más escalable
 - [X] Agrupar toda la configuración en un struct dentro de State
-- [ ] Mejor interfaz para imprimir caracteres tanto de control como normales
+- [X] Mejor interfaz para imprimir caracteres tanto de control como normales
+- [X] Cambiar a crossterm
+- [ ] Añadir modo File
+- [ ] Añadir modo wikipedia, este modo coge un artículo de wikipedia que debe ser completado
+- [ ] Gestionar de manera correcta los diferentes modos
+- [ ] Tiempo de duración personalizable
 
 ## Bugs
 - [X] `is_typed_corrected()`: No usar slices, ya que corta caracteres de >1 byte
@@ -36,9 +40,10 @@
 - [-] Tratar desbordes!
     - [ ] Para la información de debug cortar lo sobrante
     - [X] Para las líneas debo tratarlo de otra forma
-- [ ] Al salir de la terminal, sigue en raw mode, por lo que queda inutilizable
+- [X] Al salir de la terminal, sigue en raw mode, por lo que queda inutilizable
 - [ ] Cuando el ancho es inferior al width interno, panic
-- [ ] Se pierden todos los highlight y colores al redibujar
+- [X] Se pierden todos los highlight y colores al redibujar
+- [ ] Cuando el width no cabe en la pantalla, panic
 
 
 ## Hoja de ruta
@@ -72,5 +77,7 @@
     - Menú para elegir modos o configuración
     - Configuración
     - Configuración de rutas para tomar configuraciones por defecto
+    - Añadir licencia GNU
     - Empaquetar para subir a AUR
     - Subir a AUR
+    - Subir a todos los repositorios que pueda
