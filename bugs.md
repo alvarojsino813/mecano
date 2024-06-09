@@ -13,6 +13,8 @@
 - [X] Arreglar Backspace
 - [X] Mejorar expresión de `typed` en `line.rs`
 - [X] Arreglar tiempo de `Mecano`, que se ejecuta muchas veces por segundo en vez de una
-- [ ] No funciona la muestra de un número de líneas diferente a 2
+- [X] No funciona la muestra de un número de líneas diferente a 2
 - [X] No funcionan las tildes cuando son incorrectas
 - [X] No se borra correctamente la línea anterior
+- [ ] `draw_box` no dibuja correctamente
+- [ ] Cuando se muestra TOO NARROW se puede seguir escribiendo y no cuenta el tiempo

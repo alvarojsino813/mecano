@@ -23,7 +23,7 @@
     - [ ] Procesamiento de cada tecla
 - [X] Para poder actualizar la pantalla, es necesario una nueva estructura, para cambiar el estado
       desde diferentes hilos sin afectar demasiado la implementación del main.
-- [ ] Mejorar representación interna del tiempo usando tipos propios de Rust
+- [X] Mejorar representación interna del tiempo usando tipos propios de Rust
 - [X] Agrupar toda la configuración en un struct dentro de State
 - [X] Mejor interfaz para imprimir caracteres tanto de control como normales
 - [X] Cambiar a crossterm
@@ -47,6 +47,7 @@
     - [ ] Personalizar colores
     - [ ] Cambiar número de lineas que se muestran y ancho
     - [ ] Cambiar modo
+- [ ] Logs para debug
 
 ## Hoja de ruta
 

@@ -7,7 +7,6 @@ use crossterm::event::read;
 use crossterm::event::KeyCode;
 use mecano::Mecano;
 
-mod state;
 mod config;
 mod mecano;
 mod dictionary;
