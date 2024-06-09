@@ -1,0 +1,18 @@
+- [X] `is_typed_corrected()`: No usar slices, ya que corta caracteres de >1 byte
+- [X] Los caracteres que modifican el siguiente caracter, pero que no imprimen nada, desajustan los offsets
+- [X] Tratar desbordes!
+    - [X] Para las líneas debo tratarlo de otra forma
+- [X] Al salir de la terminal, sigue en raw mode, por lo que queda inutilizable
+- [X] Cuando el ancho es inferior al width interno, panic
+- [X] Se pierden todos los highlight y colores al redibujar
+- [X] Cuando el width no cabe en la pantalla, panic
+- [X] Al hacer mucho zoom, panic (relacionado con el anterior)
+- [X] El tiempo sigue apareciendo en la pantalla final de WPM
+- [X] No se imprime la puntuación al final y se queda pillado
+- [X] Cuando la líneas es más larga que el ancho se descuadra todo
+- [X] Arreglar Backspace
+- [X] Mejorar expresión de `typed` en `line.rs`
+- [X] Arreglar tiempo de `Mecano`, que se ejecuta muchas veces por segundo en vez de una
+- [ ] No funciona la muestra de un número de líneas diferente a 2
+- [X] No funcionan las tildes cuando son incorrectas
+- [X] No se borra correctamente la línea anterior
