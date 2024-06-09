@@ -1,7 +1,6 @@
 ## Aesthetics
 - [ ] Pensar un diseño, para cuadrar márgenes y demás
 - [X] Empty descuadra todo en función del ancho de la terminal
-- [ ] Cuando la líneas es más larga que el ancho se descuadra todo
 - [X] Diseño adaptable al tamaño de la terminal
     - [X] Diseño adaptable al iniciar el programa
 - [X] Crear un thread que revise el tamaño de la terminal para redibujar en caso necesario
@@ -19,32 +18,35 @@
 - [X] Mostrar wpm al acabar líneas
 - [ ] Tests para ver que state no crashea en ningún momento
 - [ ] Tests para ver como realiza una prueba que sea siempre igual. Con todos los carácteres UTF-8
+- [ ] Pruebas de rendimiento que fallen si no superan un mínimo
+    - [ ] Lecturas de archivos
+    - [ ] Procesamiento de cada tecla
 - [X] Para poder actualizar la pantalla, es necesario una nueva estructura, para cambiar el estado
       desde diferentes hilos sin afectar demasiado la implementación del main.
-
-      struct Game {
-        Mutex<State>,
-      }
-      Además es más escalable
+- [ ] Mejorar representación interna del tiempo usando tipos propios de Rust
 - [X] Agrupar toda la configuración en un struct dentro de State
 - [X] Mejor interfaz para imprimir caracteres tanto de control como normales
 - [X] Cambiar a crossterm
+- [-] Refactor para modularizar State
+    - [X] Separar control de estado de dibujado con el trait Display en State?
+        - [X] Crear struct para la línea en sí del texto
+        - [X] Abstraer en un struct diferente una línea, mostrandolas con Display
+    - [X] Hacer un draw_box() con argumentos genéricos (posicion y tamaño)
+    - [X] Unir funcion de highlight y color -> En realidad las he eliminado xd
+    - [-] Sacar a un archivo diferente BoxInfo, Screen y WordState
+        - [X] WordState sacado
+        - [ ] Screen sacado
+        - [ ] BoxInfo sacado
 - [ ] Añadir modo File
 - [ ] Añadir modo wikipedia, este modo coge un artículo de wikipedia que debe ser completado
 - [ ] Gestionar de manera correcta los diferentes modos
-- [ ] Tiempo de duración personalizable
-
-## Bugs
-- [X] `is_typed_corrected()`: No usar slices, ya que corta caracteres de >1 byte
-- [X] Los caracteres que modifican el siguiente caracter, pero que no imprimen nada, desajustan los offsets
-- [-] Tratar desbordes!
-    - [ ] Para la información de debug cortar lo sobrante
-    - [X] Para las líneas debo tratarlo de otra forma
-- [X] Al salir de la terminal, sigue en raw mode, por lo que queda inutilizable
-- [ ] Cuando el ancho es inferior al width interno, panic
-- [X] Se pierden todos los highlight y colores al redibujar
-- [ ] Cuando el width no cabe en la pantalla, panic
-
+- [-] Tiempo de duración personalizable
+    - [X] Tiempo añadido
+- [ ] Configuración
+    - [ ] Crear archivo de configuración
+    - [ ] Personalizar colores
+    - [ ] Cambiar número de lineas que se muestran y ancho
+    - [ ] Cambiar modo
 
 ## Hoja de ruta
 
@@ -63,6 +65,7 @@
     - Modo raw
     - Crear otro screen para mantener lo anterior (como nvim)
     - Tecleo en vivo
+    - MecanoLine para abstraer
     - Base del state para una palabra
     - Modo debug para ver estado
     - Uso de los offsets

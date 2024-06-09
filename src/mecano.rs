@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use std::{rc::Rc, sync::Mutex};
+use std::sync::Mutex;
 use std::{io, thread};
 use crossterm::event::KeyEvent;
 use std::thread::{spawn, JoinHandle};
@@ -13,6 +13,7 @@ pub struct Mecano {
     state : Arc<Mutex<State>>,
     end : Arc<AtomicBool>,
     join_handle : Option<JoinHandle<()>>,
+    actual_time : Duration,
 }
 
 impl Mecano {
@@ -29,6 +30,7 @@ impl Mecano {
         let join_handle = Some(spawn(move ||
             {
                 let chrono = Instant::now();
+                let mut actual_second = 0;
                 while !end_clone.load(Relaxed) {
                     let time = Instant::now();
 
@@ -36,19 +38,21 @@ impl Mecano {
                     if state_clone.lock().unwrap().get_size()
                         !=
                         actual_size {
-                        let _ = state_clone.lock().unwrap().draw_dict_mode();
+                        let _ = state_clone.lock().unwrap().draw();
                     }
 
-                    // Timer to finish
-
-                    if chrono.elapsed() > Duration::from_secs(1) {
-                        let _ = state_clone.lock().unwrap().draw_punct();
-                        let _ = state_clone.lock().unwrap().end();
+                    if chrono.elapsed().as_secs()
+                    > 
+                    Duration::from_secs(actual_second).as_secs()
+                    {
+                        actual_second = chrono.elapsed().as_secs();
+                        let _ = state_clone.lock().unwrap().sub_sec();
                     }
 
                     let delta_time = time.elapsed();
                     thread::sleep(Duration::from_millis(1000 / fps) - delta_time);
                 }
+                let _ = state_clone.lock().unwrap().draw();
             }));
 
 
@@ -56,6 +60,7 @@ impl Mecano {
             state,
             end,
             join_handle,
+            actual_time : Duration::from_secs(0), 
         })
     }
 
@@ -74,5 +79,6 @@ impl Drop for Mecano {
         if let Some(handle) = self.join_handle.take() {
             let _ = handle.join();
         }
+        println!("");
     }
 }

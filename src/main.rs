@@ -14,7 +14,7 @@ mod dictionary;
 
 fn main() -> io::Result<()> {
 
-    let mut mecano = Mecano::start("100_spanish").unwrap();
+    let mut mecano = Mecano::start("100_spanish")?;
 
     while !mecano.is_ended() {
         if let Ok(true) = poll(Duration::from_secs(0)) { break; }
@@ -31,5 +31,6 @@ fn main() -> io::Result<()> {
             }
         }
     }
+
     return Ok(());
 }

@@ -53,7 +53,6 @@ mod test {
 
         let dict = Dictionary::new("100_spanish");
 
-        assert!(dict.possible_words.len() == 100);
-
+        assert_eq!(dict.possible_words.len(), 100);
     }
 }
