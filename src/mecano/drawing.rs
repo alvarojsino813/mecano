@@ -10,23 +10,29 @@ pub struct BoxInfo {
 }
 
 impl BoxInfo {
-    pub fn centered() -> Result<BoxInfo, ()> {
+    pub fn centered(box_width : u16) -> Result<BoxInfo, ()> {
         let size = crossterm::terminal::size().unwrap();
-        let width = 70;
-        if size.0 < width + 1 {return Err(())}
-        let left_padding = (size.0 - width) / 2;
+        if size.0 < box_width + 1 || size.1 < 9 {return Err(())}
+        let left_padding = (size.0 - box_width) / 2;
         let top_padding = (size.1 - 4) / 2;
 
         Ok(BoxInfo {
             left_padding,
             top_padding,
-            width,
+            width : box_width,
             size,
         })
     }
 
-    pub fn initial_pos(&self) -> (u16, u16) {
-        return (self.left_padding, self.top_padding)
+    pub fn default() -> BoxInfo {
+        let size = crossterm::terminal::size().unwrap();
+
+        BoxInfo {
+            left_padding : 0,
+            top_padding : 0,
+            width : 0,
+            size,
+        }
     }
 }
 
@@ -37,9 +43,10 @@ pub fn print_empty_width(offset : u16, box_width : u16) -> io::Result<()> {
     Ok(())
 }
 
-pub fn draw_width_warning() -> io::Result<()> {
+pub fn draw_resize() -> io::Result<()> {
     queue!(stdout(), MoveTo(0, 0), Clear(ClearType::All))?;
-    write!(stdout(), "\rT\n\rO\n\rO\n\n\rN\n\rA\n\rR\n\rR\n\rO\n\rW\n\r")?;
+    write!(stdout(), "\rTOO NARROW. RESIZE.")?;
+    stdout().flush()?;
     return Ok(());
 }
 

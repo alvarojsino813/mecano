@@ -16,5 +16,26 @@
 - [X] No funciona la muestra de un número de líneas diferente a 2
 - [X] No funcionan las tildes cuando son incorrectas
 - [X] No se borra correctamente la línea anterior
-- [ ] `draw_box` no dibuja correctamente
-- [ ] Cuando se muestra TOO NARROW se puede seguir escribiendo y no cuenta el tiempo
+- [X] `draw_box` no dibuja correctamente
+- [X] Al hacer zoom y paralizar el tiempo, se añade tiempo al actualizar los segs a 0 y no guardar las décimas
+- [X] Panic para `delta_time` > `1 / fps`
+- [X] Solo se actualizan los marcadores por cada línea
+- [X] No hay límite a la longitud del input, provocando varios bugs
+- [X] Al hacer zoom se borra la palabra que estaba escrita
+- [X] Al iniciar con tamaño menor al posible -> panic
+- [X] Panic al ser muy aplanado
+- [X] Cuando se muestra TOO NARROW se puede seguir escribiendo y no cuenta el tiempo
+- [X] El primer y el último segundo se cuentan como segundos enteros, debería contar solo 1
+- [X] Panic cuando el width es muy bajo
+- [X] Debe haber un diccionario por defecto para funcionar
+- [X] `lines_to_show` a 0. No se permite
+- [X] width muy bajo -> panic
+- [X] Líneas sin palabras -> panic
+- [X] `lines_to_show` muy alto -> panic
+- [X] `print_lines` debe adaptarse al `lines_to_show`
+- [X] Líneas de una palabra no cuentan en la puntuación
+- [X] Mostrar campos inválidos al introducir configuración inválida
+    - [X] Deletrear mal el modo en `mecano.toml`
+    - [X] Archivo no válido en `mecano.toml`
+- [X] -l no imprime de la carpeta general si .config falla
+- [X] si .config/mecano no está creado falla

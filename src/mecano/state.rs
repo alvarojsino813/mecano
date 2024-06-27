@@ -1,37 +1,36 @@
+use crate::modes::Mode;
 use std::{
-    io::{self, Stdout, Write, stdout},
+    io::{self, Write, stdout},
     time::Duration,
     collections::VecDeque};
 
 use crossterm::{
-    cursor::{MoveDown, MoveLeft, MoveTo, MoveToColumn, MoveUp}, 
+    cursor::{self, MoveDown, MoveLeft, MoveTo, MoveToColumn, MoveUp}, 
     event::{KeyCode, KeyEvent, KeyModifiers},
     execute,
     queue,
     terminal::{Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen}};
 
-use crate::{
-    config::Config,
-    dictionary::Dictionary};
+use crate::config::Config;
 
 use super::{
-    drawing::{BoxInfo, draw_box, draw_width_warning, print_empty_width}, 
-    line::MecanoLine};
+    drawing::{draw_box, draw_resize, print_empty_width, BoxInfo}, 
+    line::{MecanoLine, WordState}};
 
 #[derive(Clone, Copy)]
 enum Screen {
     DictMode,
     Punctuation,
+    Resize,
 }
 
 pub struct State {
-    stdout : Stdout,
     input_offset : u16,
     typed_word : String,
     lines : VecDeque<MecanoLine>,
     n_total_words : usize,
     n_correct_words : usize,
-    dict : Dictionary,
+    words_source : Mode,
     box_info : BoxInfo,
     config : Config,
     end : bool,
@@ -40,24 +39,24 @@ pub struct State {
 }
 
 impl State {
-    pub fn start(path_to_dict : &str) -> io::Result<State> {
-        // TODO: permitir contents vacios y con varias lineas
-        let dict = Dictionary::new(path_to_dict);
+    pub fn start(config : Config) -> io::Result<State> {
 
-        let box_info = BoxInfo::centered().unwrap();
-        let input_offset = box_info.left_padding;
-        let mut stdout = stdout();
+        // TODO: permitir contents vacios y con varias lineas
+        // TODO: No utilizar unwrap
+        let words_source = 
+        Mode::new(&config.mode, &config.file, config.width);
+        let mut words_source = words_source.unwrap();
+
 
         let _ = crossterm::terminal::enable_raw_mode();
-        let _ = execute!(stdout, EnterAlternateScreen);
+        let _ = execute!(stdout(), EnterAlternateScreen);
 
-        let config = Config::default();
         let actual_time = config.get_max_time(); 
 
         let mut lines : VecDeque<MecanoLine> = VecDeque::new();
         for _ in 0..config.lines_to_show {
             let mecano_line = MecanoLine::new(
-                dict.yield_words(box_info.width),
+                words_source.yield_words(),
                 config.config_line
             );
             lines.push_back(mecano_line);
@@ -66,30 +65,36 @@ impl State {
         lines[0].select();
 
         let mut state : State = State {
-            stdout,
-            dict,
+            words_source,
             typed_word : String::new(),
-            input_offset,
+            input_offset : 0,
             lines,
             n_total_words : 0,
             n_correct_words : 0,
-            box_info,
+            box_info : BoxInfo::default(),
             end : false,
             config,
             actual_time,
             screen : Screen::DictMode,
         };
 
-        state.draw_dict_mode()?;
-        state.print_time()?;
-
-        state.stdout.flush()?;
-
+        state.draw()?;
+        stdout().flush()?;
 
         return Ok(state);
     }
 
     pub fn draw(&mut self) -> io::Result<()> {
+
+        queue!(stdout(), Clear(ClearType::All))?;
+        if let Ok(box_info) = BoxInfo::centered(self.config.width) {
+            self.input_offset -= self.box_info.left_padding;
+            self.box_info = box_info;
+            self.input_offset += self.box_info.left_padding;
+            self.screen = if self.end { Screen::Punctuation } else { Screen::DictMode }
+        } else {
+            self.screen = Screen::Resize;
+        }
 
         match self.screen {
             Screen::DictMode => {
@@ -98,51 +103,49 @@ impl State {
             Screen::Punctuation => {
                 self.draw_punct()?;
             }
+            Screen::Resize => {
+                draw_resize()?;
+            }
         }
 
         return Ok(());
     }
 
     fn draw_dict_mode(&mut self) -> io::Result<()> {
-
-        if let Ok(box_info) = BoxInfo::centered() {
-            self.input_offset -= self.box_info.left_padding;
-            self.box_info = box_info;
-            self.input_offset += self.box_info.left_padding;
-            queue!(stdout(), Clear(ClearType::All))?;
-            draw_box((0, 0), self.box_info.size)?;
-            draw_box(
-                (self.box_info.left_padding - 1, self.box_info.top_padding - 1),
-                (self.box_info.width + 2, self.config.lines_to_show as u16 + 2))?;
-            self.print_lines()?;
-            self.print_time()?;
-            stdout().flush()?;
-        } else {
-            draw_width_warning()?;
-        }
+        draw_box((0, 0), self.box_info.size)?;
+        draw_box(
+            (self.box_info.left_padding - 1, self.box_info.top_padding - 1),
+            (self.box_info.width + 2, self.lines_to_show() as u16 + 2))?;
+        self.print_time()?;
+        self.print_lines()?;
+        queue!(stdout(), MoveToColumn(self.box_info.left_padding))?;
+        write!(stdout(), "{}", self.typed_word)?;
+        stdout().flush()?;
 
         return Ok(());
     }
 
     fn draw_punct(&mut self) -> io::Result<()> {
-
-        // TO DO -> Sustituir unwrap()
-        self.box_info = BoxInfo::centered().unwrap();
-
-        queue!(stdout(), Clear(ClearType::All))?;
         draw_box((0, 0), self.box_info.size,)?;
         queue!(stdout(),
-            MoveTo(self.box_info.size.0 / 2, self.box_info.size.1 / 2))?;
-        write!(stdout(), "WPM: {}", self.n_total_words)?;
+            MoveTo(self.box_info.size.0 / 2 - 8, self.box_info.size.1 / 2))?;
+        write!(stdout(), "Total WPM:   {}",
+            self.n_total_words as u64 * 60 / self.config.get_max_time().as_secs())?;
         queue!(stdout(),
-            MoveTo(self.box_info.size.0 / 2, self.box_info.size.1 / 2 + 1))?;
-        write!(stdout(), "WPM (correct): {}", self.n_correct_words)?;
+            MoveTo(self.box_info.size.0 / 2 - 8, self.box_info.size.1 / 2 + 1))?;
+        write!(stdout(), "Correct WPM: {}", 
+            self.n_correct_words as u64 * 60 / self.config.get_max_time().as_secs())?;
+        queue!(stdout(),
+            MoveTo(self.box_info.size.0 / 2 - 8, self.box_info.size.1 / 2 + 3))?;
+        write!(stdout(), "<ESC> to exit")?;
+        queue!(stdout(), cursor::Hide)?;
         stdout().flush()?;
         return Ok(());
     }
 
     pub fn type_key_event(&mut self, key : KeyEvent) -> io::Result<()> {
         if self.end { return Ok(()); }
+        if let Screen::Resize = self.screen { return Ok(()); }
         let shift = KeyModifiers::from_name("SHIFT").unwrap();
         let none = KeyModifiers::empty();
         if key.modifiers != shift &&
@@ -173,7 +176,17 @@ impl State {
 
     fn type_char(&mut self, c : char) -> io::Result<()> {
         if c.is_whitespace() {
-            if let Err(()) = self.lines[0].next_word(&self.typed_word) {
+            let next_word = self.lines[0].next_word(&self.typed_word);
+            if let Ok(word_state) = next_word {
+                self.n_total_words += 1;
+                if let WordState::Correct = word_state {
+                    self.n_correct_words += 1;
+                }
+            } else {
+                self.n_total_words += 1;
+                if let Err(WordState::Correct) = next_word {
+                    self.n_correct_words += 1;
+                }
                 self.next_line()?;
             }
             self.typed_word.clear();
@@ -183,7 +196,9 @@ impl State {
         } else if !c.is_control() {
             self.typed_word.push(c);
             write!(stdout(), "{}", c)?;
-            self.input_offset += 1;
+            if self.input_offset + 1 < self.box_info.left_padding + self.box_info.width {
+                self.input_offset += 1;
+            }
             self.lines[0].typed(&self.typed_word);
             self.print_selected_line()?;
         } 
@@ -193,7 +208,7 @@ impl State {
 
     fn print_selected_line(&mut self) -> io::Result<()> {
         queue!(stdout(), 
-            MoveUp(self.config.lines_to_show as u16 + 1),
+            MoveUp(self.lines_to_show() as u16 + 1),
             MoveToColumn(self.box_info.left_padding))?;
 
         write!(stdout(), "{}", self.lines[0])?;
@@ -218,11 +233,9 @@ impl State {
     }
 
     fn next_line(&mut self) -> io::Result<()> {
-        self.n_correct_words += self.lines[0].n_correct_words();
-        self.n_total_words += self.lines[0].n_total_words();
         self.lines.pop_front(); 
         self.lines.push_back(MecanoLine::new(
-            self.dict.yield_words(self.box_info.width),
+            self.words_source.yield_words(),
             self.config.config_line
         ));
         self.input_offset = self.box_info.left_padding;
@@ -235,7 +248,7 @@ impl State {
 
         queue!(stdout(),
             MoveTo(self.box_info.left_padding, self.box_info.top_padding))?;
-        for line in self.lines.iter() {
+        for line in self.lines.iter().take(self.lines_to_show() as usize) {
             print_empty_width(self.box_info.left_padding, self.box_info.width)?;
             queue!(stdout(), 
                 MoveToColumn(self.box_info.left_padding))?;
@@ -249,6 +262,7 @@ impl State {
     }
 
     pub fn print_time(&mut self) -> io::Result<()> {
+        if let Screen::Resize = self.screen { return Ok(()); }
         queue!(stdout(), 
             MoveTo(self.box_info.left_padding, self.box_info.top_padding - 2))?;
         let secs = self.actual_time.as_secs() % 60;
@@ -261,7 +275,7 @@ impl State {
     }
 
     pub fn sub_sec(&mut self) {
-        if self.actual_time >= Duration::from_secs(1) {
+        if self.actual_time > Duration::from_secs(1) {
             self.actual_time -= Duration::from_secs(1);
             let _ = self.print_time();
         } else {
@@ -272,8 +286,14 @@ impl State {
     fn go_to_input(&mut self) -> io::Result<()> {
         queue!(stdout(),
             MoveTo(self.input_offset,
-                self.box_info.top_padding + self.config.lines_to_show as u16 + 1))?;
+                self.box_info.top_padding + self.lines_to_show() as u16 + 1))?;
         return Ok(());
+    }
+
+    fn lines_to_show(&self) -> u16 {
+        return std::cmp::min::<u16>(
+            self.box_info.size.1 / 2 - 2,
+            self.config.lines_to_show as u16);
     }
 }
 
@@ -281,6 +301,42 @@ impl Drop for State {
     fn drop (&mut self) {
         let _ = crossterm::terminal::disable_raw_mode();
         let _ = execute!(stdout(), Clear(ClearType::All),
-            LeaveAlternateScreen);
+            LeaveAlternateScreen, cursor::Show);
+    }
+}
+
+#[cfg(test)]
+
+mod test {
+    use std::thread;
+    use std::time::Duration;
+
+    use super::State;
+    use crate::find_path_to_file;
+    use crate::mecano::Config;
+
+
+    #[test]
+    fn typing_normally() {
+        let mut config = Config::_default();
+        config.file = find_path_to_file("1_test").expect("1_test file not found");
+        config.mode = "dictionary".to_string();
+        let mut state = State::start(config).unwrap();
+        let keys = [
+            'H', 'o', 'l', 'a', ' ', 
+            'q', 'u', 'e', ' ',
+            't', 'a', 'l', ' ',
+            'H', 'o', 'l', 'a', ' ', 
+            'H', 'o', 'l', 'a', ' ', 
+        ];
+        for i in keys {
+            thread::sleep(Duration::from_millis(5));
+            let _ = state.type_char(i);
+        }
+
+        thread::sleep(Duration::from_millis(500));
+        assert_eq!(state.n_correct_words, 3);
+        assert_eq!(state.n_total_words, 5);
+        thread::sleep(Duration::from_millis(1000));
     }
 }

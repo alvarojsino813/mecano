@@ -1,5 +1,5 @@
 ## Aesthetics
-- [ ] Pensar un diseño, para cuadrar márgenes y demás
+- [X] Pensar un diseño, para cuadrar márgenes y demás
 - [X] Empty descuadra todo en función del ancho de la terminal
 - [X] Diseño adaptable al tamaño de la terminal
     - [X] Diseño adaptable al iniciar el programa
@@ -16,18 +16,15 @@
 - [X] Al escribir una palabra incorrecta, y escribir un caracter correcto, se marca como seleccionado y no como rojo
 - [X] Utilizar líneas
 - [X] Mostrar wpm al acabar líneas
-- [ ] Tests para ver que state no crashea en ningún momento
-- [ ] Tests para ver como realiza una prueba que sea siempre igual. Con todos los carácteres UTF-8
-- [ ] Pruebas de rendimiento que fallen si no superan un mínimo
-    - [ ] Lecturas de archivos
-    - [ ] Procesamiento de cada tecla
+- [X] Tests para ver que state no crashea en ningún momento
+- [X] Tests para ver como realiza una prueba que sea siempre igual.
 - [X] Para poder actualizar la pantalla, es necesario una nueva estructura, para cambiar el estado
       desde diferentes hilos sin afectar demasiado la implementación del main.
 - [X] Mejorar representación interna del tiempo usando tipos propios de Rust
 - [X] Agrupar toda la configuración en un struct dentro de State
 - [X] Mejor interfaz para imprimir caracteres tanto de control como normales
 - [X] Cambiar a crossterm
-- [-] Refactor para modularizar State
+- [X] Refactor para modularizar State
     - [X] Separar control de estado de dibujado con el trait Display en State?
         - [X] Crear struct para la línea en sí del texto
         - [X] Abstraer en un struct diferente una línea, mostrandolas con Display
@@ -36,18 +33,24 @@
     - [-] Sacar a un archivo diferente BoxInfo, Screen y WordState
         - [X] WordState sacado
         - [ ] Screen sacado
-        - [ ] BoxInfo sacado
-- [ ] Añadir modo File
+        - [X] BoxInfo sacado
+- [X] Añadir modo File
 - [ ] Añadir modo wikipedia, este modo coge un artículo de wikipedia que debe ser completado
-- [ ] Gestionar de manera correcta los diferentes modos
-- [-] Tiempo de duración personalizable
+- [X] Gestionar de manera correcta los diferentes modos
+- [X] Tiempo de duración personalizable
     - [X] Tiempo añadido
-- [ ] Configuración
+- [-] Configuración
     - [ ] Crear archivo de configuración
     - [ ] Personalizar colores
-    - [ ] Cambiar número de lineas que se muestran y ancho
+    - [X] Cambiar número de lineas
+    - [X] Cambiar ancho que se muestra
     - [ ] Cambiar modo
 - [ ] Logs para debug
+- [ ] Hacer mecano a prueba de errores
+    - [ ] Archivos inexistentes o corruptos
+    - [ ] Argumentos incorrectos
+    - [ ] Escribir mientras aparece el mensaje TOO NARROW
+    - [ ] Argumentos para crear State o Mecano incorrectos
 
 ## Hoja de ruta
 
@@ -56,6 +59,18 @@
 - Como creo state para que cuadre con el modo
 - Mecano para manejar el redimensionar
 - Configuración extensible
+
+## Restante para publicación
+
+- [X] Modo archivo
+- [ ] CLI adecuado
+    - [ ] Autocomplete
+- [X] Configuración de los elementos ya previstos
+    - [X] Leer config a partir de un archivo
+    - [X] Añadir modo por defecto a config
+    - [X] Toda la información para construir mecano debe tomarse de config
+    - [X] Error para el usuario si no existe un archivo de configuración
+- [ ] Empaquetado
 
 ## Explicación
 

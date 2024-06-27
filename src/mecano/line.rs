@@ -10,7 +10,7 @@ pub struct MecanoLine {
 }
 
 #[derive(Clone, Copy, PartialEq)]
-enum WordState {
+pub enum WordState {
     Correct,
     Wrong,
     Selected,
@@ -39,17 +39,23 @@ impl MecanoLine {
                 .chars()
                 .zip(typed_word.chars())
                 .all(|(a, b)|
-                    a == b) {
+                    a == b) &&
+                self.words[self.typing_idx].len() >= 
+                typed_word.len() {
                 WordState::Selected
             } else {
                 WordState::TypingWrong
             };
         }
 
-    pub fn next_word(&mut self, typed_word : &str) -> Result<(), ()> {
+    pub fn next_word(&mut self, typed_word : &str) -> Result<WordState, WordState> {
 
         if self.typing_idx >= self.words.len() - 1{
-            return Err(())
+            if self.words[self.typing_idx] == typed_word {
+                return Err(WordState::Correct);
+            } else {
+                return Err(WordState::Wrong);
+            };
         }
 
         self.words_state[self.typing_idx] = 
@@ -62,22 +68,11 @@ impl MecanoLine {
         self.typing_idx += 1;
         self.words_state[self.typing_idx] = WordState::Selected;
 
-        return Ok(());
+        return Ok(self.words_state[self.typing_idx - 1]);
     }
 
     pub fn select(&mut self) {
         self.words_state[0] = WordState::Selected;
-    }
-
-    pub fn n_correct_words(&self) -> usize {
-        return self.words_state
-            .iter()
-            .filter(|state| **state == WordState::Correct)
-            .count()
-    }
-
-    pub fn n_total_words(&self) -> usize {
-        return self.words_state.len();
     }
 }
 
@@ -121,7 +116,7 @@ mod test {
 
     fn build() -> MecanoLine {
         let words_vec : Vec<String> = vec!["Hola".to_string(), "que".to_string(), "tal".to_string(), "estas".to_string()];
-        return MecanoLine::new(words_vec, ConfigLine::default());
+        return MecanoLine::new(words_vec, ConfigLine::_default());
     }
 
     #[test]
