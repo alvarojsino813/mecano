@@ -1,0 +1,14 @@
+# Maximum width of each line
+width = 80
+
+# Time for each try
+max_time = 60
+
+# Lines shown to type
+lines_to_show = 2
+
+# Colors for the words through their different states
+bg_selected = "#AAAAAA"
+bg_wrong = "#DD8888"
+fg_correct = "#44DD44"
+fg_wrong = "#DD4444"
