@@ -17,10 +17,9 @@ mod help;
 
 fn main() -> io::Result<()> {
 
-
     let config_path = 
-    env::var("HOME") .expect("home directory not found") + "/.config/mecano";
-    fs::create_dir_all(&config_path)?;
+    env::var("HOME").expect("home directory not found") + "/.config/mecano";
+    copy_dir_all("/usr/share/mecano", config_path.clone())?;
     let log_path = config_path + "/mecano.log";
     let log_file = File::create(log_path)?;
     let log_fd = log_file.as_raw_fd();
@@ -169,6 +168,20 @@ fn find_path_to_file(input : &str) -> io::Result<String> {
         }
     }
     return Err(Error::new(ErrorKind::NotFound, "file not found"));
+}
+
+fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> {
+    fs::create_dir_all(&dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        if ty.is_dir() {
+            copy_dir_all(entry.path(), dst.as_ref().join(entry.file_name()))?;
+        } else {
+            fs::copy(entry.path(), dst.as_ref().join(entry.file_name()))?;
+        }
+    }
+    return Ok(());
 }
 
 fn healthy_file(path : &str) -> io::Result<()> {
