@@ -4,10 +4,10 @@ A minimalistic typing test
 
 ## Installation
 
-You can install it from the AUR repositories. Example with `yay`:
+Still working on uploading mecano to AUR. Meanwhile you can clone the repository and:
 
 ```bash
-yay -Sy mecano
+cargo run
 ```
 
 ## Usage
