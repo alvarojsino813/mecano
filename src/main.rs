@@ -19,7 +19,9 @@ fn main() -> io::Result<()> {
 
     let config_path = 
     env::var("HOME").expect("home directory not found") + "/.config/mecano";
-    copy_dir_all("/usr/share/mecano", config_path.clone())?;
+    if let Err(_) = healthy_file(&config_path) {
+        copy_dir_all("/usr/share/mecano", config_path.clone())?;
+    }
     let log_path = config_path + "/mecano.log";
     let log_file = File::create(log_path)?;
     let log_fd = log_file.as_raw_fd();
