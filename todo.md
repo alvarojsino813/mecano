@@ -63,7 +63,7 @@
 ## Restante para publicación
 
 - [X] Modo archivo
-- [ ] CLI adecuado
+- [-] CLI adecuado
     - [ ] Autocomplete
 - [X] Configuración de los elementos ya previstos
     - [X] Leer config a partir de un archivo
