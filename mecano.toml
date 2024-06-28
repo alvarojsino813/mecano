@@ -1,0 +1,23 @@
+# Maximum width of each line
+width = 80
+
+# Time for each try
+max_time = 60
+
+# Max lines shown to type
+lines_to_show = 2
+
+# file 
+file = "100_spanish"
+
+# mode [ dictionary | file ]
+mode = "dictionary"
+
+# Line configuration
+[config_line]
+
+# Colors for each state of the line
+bg_selected = "#888888"
+bg_wrong = "#FF8888"
+fg_correct = "#44FF44"
+fg_wrong = "#FF4444"
