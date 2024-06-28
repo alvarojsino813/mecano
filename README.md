@@ -4,10 +4,10 @@ A minimalistic typing test
 
 ## Installation
 
-Still working on uploading mecano to AUR. Meanwhile you can clone the repository and:
+You can install it with any AUR package manager, like yay:
 
 ```bash
-cargo run
+yay -Sy mecano
 ```
 
 ## Usage
