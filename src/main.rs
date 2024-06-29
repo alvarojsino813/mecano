@@ -155,9 +155,7 @@ fn find_path_to_file(input : &str) -> io::Result<String> {
 
 
     for path in paths_to_search {
-        eprintln!("{}", path);
         if let Ok(()) = healthy_file(&path) {
-            eprintln!("Chosen: {}", path);
             return Ok(path);
         }
     }

@@ -8,7 +8,6 @@ pub struct MecanoDictionary {
 impl MecanoDictionary {
     pub fn new(path_to_dictionary : &str, max_width : u16) -> MecanoDictionary {
         let mut possible_words : Vec<String> = Vec::new();
-        eprintln!("mode : dictionary\nfile : {}", path_to_dictionary);
         let contents = std::fs::read_to_string(path_to_dictionary).unwrap();
 
         for word in contents.split_whitespace() {

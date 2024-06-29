@@ -29,8 +29,6 @@ impl MecanoFile {
             panic!("`width too low");
         }
 
-        eprintln!("{:?}", file_words);
-
         return MecanoFile {
             file_words,
             nth_word : 0,
