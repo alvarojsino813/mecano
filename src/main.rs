@@ -1,6 +1,4 @@
 use std::{env, fs};
-use std::fs::File;
-use std::os::fd::AsRawFd;
 use std::path::Path;
 use std::{io::{self, Error, ErrorKind}, time::Duration};
 use config::Config;
@@ -19,14 +17,8 @@ fn main() -> io::Result<()> {
 
     let config_path = 
     env::var("HOME").expect("home directory not found") + "/.config/mecano";
-    if let Err(_) = healthy_file(&config_path) {
+    if let Err(_) = healthy_file(&(config_path.clone() + "dictionaries")) {
         copy_dir_all("/usr/share/mecano", config_path.clone())?;
-    }
-    let log_path = config_path + "/mecano.log";
-    let log_file = File::create(log_path)?;
-    let log_fd = log_file.as_raw_fd();
-    unsafe {
-        libc::dup2(log_fd, libc::STDERR_FILENO);
     }
 
     let args: Vec<String> = env::args().collect();
