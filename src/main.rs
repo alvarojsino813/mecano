@@ -17,8 +17,8 @@ fn main() -> io::Result<()> {
 
     let config_path = 
     env::var("HOME").expect("home directory not found") + "/.config/mecano";
-    if let Err(_) = healthy_file(&(config_path.clone() + "dictionaries")) {
-        copy_dir_all("/usr/share/mecano", config_path.clone())?;
+    if let Err(_) = healthy_file(&(config_path.clone() + "/mecano.toml")) {
+        fs::copy("/usr/share/mecano/mecano.toml", config_path + "/mecano.toml")?;
     }
 
     let args: Vec<String> = env::args().collect();
