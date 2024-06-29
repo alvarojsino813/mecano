@@ -89,7 +89,7 @@ fn main() -> io::Result<()> {
             }
 
             "-v" | "--version" => {
-                println!("mecano 0.1.0");
+                println!("mecano 0.1.1");
                 return Ok(());
             }
 
