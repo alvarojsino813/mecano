@@ -14,7 +14,7 @@ yay -Sy mecano
 
 Just execute and type!
 
-```bash
+```
 Mecano, a typing train
 
 Usage: mecano [OPTIONS] [FLAGS]
