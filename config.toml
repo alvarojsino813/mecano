@@ -8,11 +8,7 @@ max_time = 60
 lines_to_show = 2
 
 # file 
-<<<<<<< HEAD
-file = "aslkdfj"
-=======
 file = "100_english"
->>>>>>> d502be4 (Name changed)
 
 # mode [ dictionary | file ]
 mode = "dictionary"
