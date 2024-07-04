@@ -92,7 +92,7 @@ fn main() -> io::Result<()> {
                 println!("mecano v0.1.2");
                 return Ok(());
             }
-
+            
             "-l" | "--list-dictionaries" => {
                 let path_to_dictionaries;
                 if let Ok(p) = find_path_to_file("dictionaries") {
