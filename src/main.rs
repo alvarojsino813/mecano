@@ -1,8 +1,7 @@
 use std::{env, fs};
 use std::path::Path;
-use std::{io::{self, Error, ErrorKind}, time::Duration};
+use std::io::{self, Error, ErrorKind};
 use config::Config;
-use crossterm::event::{poll, read, Event, KeyCode};
 
 use mecano::Mecano;
 
@@ -118,23 +117,7 @@ fn main() -> io::Result<()> {
         }
     }
 
-    let mut mecano = Mecano::start(config)?;
-
-    while !mecano.is_ended() {
-        if let Ok(true) = poll(Duration::from_secs(0)) { break; }
-        if let Ok(event) = read() {
-            if let Event::Key(key_event) = event {
-                match key_event.code {
-                    KeyCode::Esc => {
-                        break;
-                    },
-                    _ => {
-                        mecano.type_key_event(key_event)?
-                    }
-                }
-            }
-        }
-    }
+    Mecano::play(config)?;
 
     return Ok(());
 }
@@ -160,20 +143,6 @@ fn find_path_to_file(input : &str) -> io::Result<String> {
         }
     }
     return Err(Error::new(ErrorKind::NotFound, "file not found"));
-}
-
-fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> io::Result<()> {
-    fs::create_dir_all(&dst)?;
-    for entry in fs::read_dir(src)? {
-        let entry = entry?;
-        let ty = entry.file_type()?;
-        if ty.is_dir() {
-            copy_dir_all(entry.path(), dst.as_ref().join(entry.file_name()))?;
-        } else {
-            fs::copy(entry.path(), dst.as_ref().join(entry.file_name()))?;
-        }
-    }
-    return Ok(());
 }
 
 fn healthy_file(path : &str) -> io::Result<()> {

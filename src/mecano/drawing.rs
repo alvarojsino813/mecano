@@ -10,8 +10,7 @@ pub struct BoxInfo {
 }
 
 impl BoxInfo {
-    pub fn centered(box_width : u16) -> Result<BoxInfo, ()> {
-        let size = crossterm::terminal::size().unwrap();
+    pub fn centered(box_width : u16, size : (u16, u16)) -> Result<BoxInfo, ()> {
         if size.0 < box_width + 1 || size.1 < 9 {return Err(())}
         let left_padding = (size.0 - box_width) / 2;
         let top_padding = (size.1 - 4) / 2;
@@ -43,7 +42,7 @@ pub fn print_empty_width(offset : u16, box_width : u16) -> io::Result<()> {
     Ok(())
 }
 
-pub fn draw_resize() -> io::Result<()> {
+pub fn draw_too_narrow() -> io::Result<()> {
     queue!(stdout(), MoveTo(0, 0), Clear(ClearType::All))?;
     write!(stdout(), "\rTOO NARROW. RESIZE.")?;
     stdout().flush()?;

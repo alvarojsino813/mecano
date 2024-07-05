@@ -1,8 +1,6 @@
 use crate::modes::Mode;
 use std::{
-    io::{self, Write, stdout},
-    time::Duration,
-    collections::VecDeque};
+    cmp::min, collections::VecDeque, io::{self, stdout, Write}, time::Duration};
 
 use crossterm::{
     cursor::{self, MoveDown, MoveLeft, MoveTo, MoveToColumn, MoveUp}, 
@@ -11,17 +9,18 @@ use crossterm::{
     queue,
     terminal::{Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen}};
 
+
 use crate::config::Config;
 
 use super::{
-    drawing::{draw_box, draw_resize, print_empty_width, BoxInfo}, 
+    drawing::{draw_box, draw_too_narrow, print_empty_width, BoxInfo}, 
     line::{MecanoLine, WordState}};
 
 #[derive(Clone, Copy)]
 enum Screen {
     DictMode,
     Punctuation,
-    Resize,
+    TooNarrow,
 }
 
 pub struct State {
@@ -34,6 +33,7 @@ pub struct State {
     box_info : BoxInfo,
     config : Config,
     end : bool,
+    resized : bool,
     actual_time : Duration,
     screen : Screen, 
 }
@@ -46,7 +46,6 @@ impl State {
         let words_source = 
         Mode::new(&config.mode, &config.file, config.width);
         let mut words_source = words_source.unwrap();
-
 
         let _ = crossterm::terminal::enable_raw_mode();
         let _ = execute!(stdout(), EnterAlternateScreen);
@@ -73,12 +72,14 @@ impl State {
             n_correct_words : 0,
             box_info : BoxInfo::default(),
             end : false,
+            resized : false,
             config,
             actual_time,
             screen : Screen::DictMode,
         };
 
         state.draw()?;
+
         stdout().flush()?;
 
         return Ok(state);
@@ -87,13 +88,16 @@ impl State {
     pub fn draw(&mut self) -> io::Result<()> {
 
         queue!(stdout(), Clear(ClearType::All))?;
-        if let Ok(box_info) = BoxInfo::centered(self.config.width) {
+        let real_size = crossterm::terminal::size().unwrap();
+        self.resized = real_size != self.box_info.size;
+
+        if let Ok(box_info) = BoxInfo::centered(self.config.width, real_size) {
             self.input_offset -= self.box_info.left_padding;
             self.box_info = box_info;
             self.input_offset += self.box_info.left_padding;
             self.screen = if self.end { Screen::Punctuation } else { Screen::DictMode }
         } else {
-            self.screen = Screen::Resize;
+            self.screen = Screen::TooNarrow;
         }
 
         match self.screen {
@@ -103,8 +107,8 @@ impl State {
             Screen::Punctuation => {
                 self.draw_punct()?;
             }
-            Screen::Resize => {
-                draw_resize()?;
+            Screen::TooNarrow => {
+                draw_too_narrow()?;
             }
         }
 
@@ -145,7 +149,7 @@ impl State {
 
     pub fn type_key_event(&mut self, key : KeyEvent) -> io::Result<()> {
         if self.end { return Ok(()); }
-        if let Screen::Resize = self.screen { return Ok(()); }
+        if let Screen::TooNarrow = self.screen { return Ok(()); }
         let shift = KeyModifiers::from_name("SHIFT").unwrap();
         let none = KeyModifiers::empty();
         if key.modifiers != shift &&
@@ -170,8 +174,12 @@ impl State {
         let _ = self.draw();
     }
 
-    pub fn get_size(&self) -> (u16, u16) {
-        return self.box_info.size;
+    pub fn is_ended(&self) -> bool {
+        return self.end;
+    }
+
+    pub fn is_resized(&self) -> bool {
+        return self.resized;
     }
 
     fn type_char(&mut self, c : char) -> io::Result<()> {
@@ -261,8 +269,8 @@ impl State {
         return Ok(());
     }
 
-    pub fn print_time(&mut self) -> io::Result<()> {
-        if let Screen::Resize = self.screen { return Ok(()); }
+    fn print_time(&mut self) -> io::Result<()> {
+        if let Screen::TooNarrow = self.screen { return Ok(()); }
         queue!(stdout(), 
             MoveTo(self.box_info.left_padding, self.box_info.top_padding - 2))?;
         let secs = self.actual_time.as_secs() % 60;
@@ -274,13 +282,13 @@ impl State {
         return Ok(());
     }
 
-    pub fn sub_sec(&mut self) {
-        if self.actual_time > Duration::from_secs(1) {
-            self.actual_time -= Duration::from_secs(1);
-            let _ = self.print_time();
-        } else {
+    pub fn update_time(&mut self, elapsed : Duration) -> io::Result<()> {
+        self.actual_time -= min(elapsed, self.actual_time);
+        self.print_time()?;
+        if self.actual_time == Duration::from_secs(0) {
             self.end()
         }
+        return Ok(());
     }
 
     fn go_to_input(&mut self) -> io::Result<()> {
@@ -337,6 +345,5 @@ mod test {
         thread::sleep(Duration::from_millis(500));
         assert_eq!(state.n_correct_words, 3);
         assert_eq!(state.n_total_words, 5);
-        thread::sleep(Duration::from_millis(1000));
     }
 }
