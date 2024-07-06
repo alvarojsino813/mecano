@@ -49,6 +49,7 @@ pub struct Config {
     pub config_line : ConfigLine,
     pub mode : String,
     pub file : String,
+    pub fps : u16,
 }
 
 impl Config {
@@ -60,6 +61,7 @@ impl Config {
             lines_to_show : 2,
             mode : "dictionary".to_string(),
             file : find_path_to_file("100_spanish").expect("file not found"),
+            fps : 120,
         }
     }
 

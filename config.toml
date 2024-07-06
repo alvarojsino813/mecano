@@ -13,6 +13,9 @@ file = "100_english"
 # mode [ dictionary | file ]
 mode = "dictionary"
 
+# fps
+fps = 120
+
 # Line configuration
 [config_line]
 

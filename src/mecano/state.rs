@@ -85,6 +85,25 @@ impl State {
         return Ok(state);
     }
 
+    pub fn end(&mut self) {
+        self.end = true;
+        self.screen = Screen::Punctuation;
+        let _ = self.draw();
+    }
+
+    pub fn is_ended(&self) -> bool { return self.end; }
+
+    pub fn is_resized(&self) -> bool { return self.resized; }
+
+    pub fn update_time(&mut self, elapsed : Duration) -> io::Result<()> {
+        self.actual_time -= min(elapsed, self.actual_time);
+        self.print_time()?;
+        if self.actual_time == Duration::from_secs(0) {
+            self.end()
+        }
+        return Ok(());
+    }
+
     pub fn draw(&mut self) -> io::Result<()> {
 
         queue!(stdout(), Clear(ClearType::All))?;
@@ -95,7 +114,8 @@ impl State {
             self.input_offset -= self.box_info.left_padding;
             self.box_info = box_info;
             self.input_offset += self.box_info.left_padding;
-            self.screen = if self.end { Screen::Punctuation } else { Screen::DictMode }
+            self.screen = if self.end { Screen::Punctuation } 
+                else { Screen::DictMode }
         } else {
             self.screen = Screen::TooNarrow;
         }
@@ -133,14 +153,21 @@ impl State {
         draw_box((0, 0), self.box_info.size,)?;
         queue!(stdout(),
             MoveTo(self.box_info.size.0 / 2 - 8, self.box_info.size.1 / 2))?;
+
         write!(stdout(), "Total WPM:   {}",
-            self.n_total_words as u64 * 60 / self.config.get_max_time().as_secs())?;
+            self.n_total_words as u64 *
+            60 / self.config.get_max_time().as_secs())?;
         queue!(stdout(),
-            MoveTo(self.box_info.size.0 / 2 - 8, self.box_info.size.1 / 2 + 1))?;
+            MoveTo(self.box_info.size.0 / 2 - 8,
+                self.box_info.size.1 / 2 + 1))?;
+
         write!(stdout(), "Correct WPM: {}", 
-            self.n_correct_words as u64 * 60 / self.config.get_max_time().as_secs())?;
+            self.n_correct_words as u64 * 
+            60 / self.config.get_max_time().as_secs())?;
         queue!(stdout(),
-            MoveTo(self.box_info.size.0 / 2 - 8, self.box_info.size.1 / 2 + 3))?;
+            MoveTo(self.box_info.size.0 / 2 - 8,
+                self.box_info.size.1 / 2 + 3))?;
+
         write!(stdout(), "<ESC> to exit")?;
         queue!(stdout(), cursor::Hide)?;
         stdout().flush()?;
@@ -166,20 +193,6 @@ impl State {
             _ => (),
         }
         return Ok(());
-    }
-
-    pub fn end(&mut self) {
-        self.end = true;
-        self.screen = Screen::Punctuation;
-        let _ = self.draw();
-    }
-
-    pub fn is_ended(&self) -> bool {
-        return self.end;
-    }
-
-    pub fn is_resized(&self) -> bool {
-        return self.resized;
     }
 
     fn type_char(&mut self, c : char) -> io::Result<()> {
@@ -214,18 +227,6 @@ impl State {
         return Ok(());
     }
 
-    fn print_selected_line(&mut self) -> io::Result<()> {
-        queue!(stdout(), 
-            MoveUp(self.lines_to_show() as u16 + 1),
-            MoveToColumn(self.box_info.left_padding))?;
-
-        write!(stdout(), "{}", self.lines[0])?;
-
-        self.go_to_input()?;
-
-        return Ok(());
-    }
-
     fn backspace(&mut self) -> io::Result<()> {
         if self.input_offset > self.box_info.left_padding {
             self.input_offset -= 1;
@@ -237,6 +238,19 @@ impl State {
             self.print_selected_line()?;
             stdout().flush()?;
         }
+        return Ok(());
+    }
+
+
+    fn print_selected_line(&mut self) -> io::Result<()> {
+        queue!(stdout(), 
+            MoveUp(self.lines_to_show() as u16 + 1),
+            MoveToColumn(self.box_info.left_padding))?;
+
+        write!(stdout(), "{}", self.lines[0])?;
+
+        self.go_to_input()?;
+
         return Ok(());
     }
 
@@ -282,14 +296,6 @@ impl State {
         return Ok(());
     }
 
-    pub fn update_time(&mut self, elapsed : Duration) -> io::Result<()> {
-        self.actual_time -= min(elapsed, self.actual_time);
-        self.print_time()?;
-        if self.actual_time == Duration::from_secs(0) {
-            self.end()
-        }
-        return Ok(());
-    }
 
     fn go_to_input(&mut self) -> io::Result<()> {
         queue!(stdout(),

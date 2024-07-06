@@ -15,10 +15,10 @@ pub struct Mecano { }
 
 impl Mecano {
     pub fn play(config : Config) -> io::Result<()> {
+        let fps = config.fps;
         let mut state = State::start(config)?;
         let mut running = false;
-        let fps = 120.0;
-        let frame_duration = Duration::from_secs_f64(1.0 / fps);
+        let frame_duration = Duration::from_secs_f64(1.0 / fps as f64);
         let mut delta;
         let mut chrono = Instant::now();
 
