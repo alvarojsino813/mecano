@@ -38,19 +38,9 @@ impl MecanoFile {
 }
 
 impl MecanoMode for MecanoFile {
-    fn yield_words(&mut self) -> Vec<String> {
-        let mut words_yielded : Vec<String> = Vec::new();
-        let mut width = 0;
-
-        while 
-        width + self.file_words[self.nth_word].chars().count() 
-        < 
-        self.max_width as usize {
-            words_yielded.push(self.file_words[self.nth_word].clone());
-            width += self.file_words[self.nth_word].chars().count() + 1;
-            self.nth_word = (self.nth_word + 1) % self.file_words.len();
-        }
-
-        return words_yielded;
+    fn yield_word(&mut self) -> &str {
+        let word = &self.file_words[self.nth_word];
+        self.nth_word = (self.nth_word + 1) % self.file_words.len();
+        return word;
     }
 }

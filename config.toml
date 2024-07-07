@@ -8,7 +8,7 @@ max_time = 60
 lines_to_show = 2
 
 # file 
-file = "100_english"
+file = "100_spanish"
 
 # mode [ dictionary | file ]
 mode = "dictionary"
@@ -20,7 +20,6 @@ fps = 120
 [config_line]
 
 # Colors for each state of the line
-bg_selected = "#888888"
-bg_wrong = "#FF8888"
-fg_correct = "#44FF44"
-fg_wrong = "#FF4444"
+selected = "#888888"
+wrong = "#FF8888"
+correct = "#44FF44"

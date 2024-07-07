@@ -4,7 +4,6 @@ use std::io::{self, Error, ErrorKind};
 use config::Config;
 
 use mecano::Mecano;
-
 use crate::help::Help;
 
 mod config;

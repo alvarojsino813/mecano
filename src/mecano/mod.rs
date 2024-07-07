@@ -1,6 +1,7 @@
 mod state;
-mod line;
 mod drawing;
+mod buffer;
+mod word;
 
 use std::cmp::min;
 use std::time::{Duration, Instant};

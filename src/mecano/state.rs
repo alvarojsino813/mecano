@@ -12,9 +12,7 @@ use crossterm::{
 
 use crate::config::Config;
 
-use super::{
-    drawing::{draw_box, draw_too_narrow, print_empty_width, BoxInfo}, 
-    line::{MecanoLine, WordState}};
+use super::{buffer::MecanoBuffer, drawing::{draw_box, draw_too_narrow, print_empty_width, BoxInfo}};
 
 #[derive(Clone, Copy)]
 enum Screen {
@@ -26,10 +24,9 @@ enum Screen {
 pub struct State {
     input_offset : u16,
     typed_word : String,
-    lines : VecDeque<MecanoLine>,
+    buffer : MecanoBuffer,
     n_total_words : usize,
     n_correct_words : usize,
-    words_source : Mode,
     box_info : BoxInfo,
     config : Config,
     end : bool,
@@ -39,38 +36,35 @@ pub struct State {
 }
 
 impl State {
+    
+    // CHANGE
     pub fn start(config : Config) -> io::Result<State> {
 
-        // TODO: permitir contents vacios y con varias lineas
         // TODO: No utilizar unwrap
         let words_source = 
         Mode::new(&config.mode, &config.file, config.width);
-        let mut words_source = words_source.unwrap();
+        let words_source = words_source.unwrap();
 
         let _ = crossterm::terminal::enable_raw_mode();
         let _ = execute!(stdout(), EnterAlternateScreen);
 
+        let box_info = BoxInfo::default();
         let actual_time = config.get_max_time(); 
-
-        let mut lines : VecDeque<MecanoLine> = VecDeque::new();
-        for _ in 0..config.lines_to_show {
-            let mecano_line = MecanoLine::new(
-                words_source.yield_words(),
-                config.config_line
-            );
-            lines.push_back(mecano_line);
-        }
-
-        lines[0].select();
+        let buffer = MecanoBuffer::new(
+            words_source,
+            config.config_line,
+            (std::cmp::min::<u16>( box_info.size.1 / 2 - 2,
+                config.lines_to_show as u16),
+                box_info.width)
+        );
 
         let mut state : State = State {
-            words_source,
             typed_word : String::new(),
             input_offset : 0,
-            lines,
+            buffer, 
             n_total_words : 0,
             n_correct_words : 0,
-            box_info : BoxInfo::default(),
+            box_info, 
             end : false,
             resized : false,
             config,
@@ -114,6 +108,8 @@ impl State {
             self.input_offset -= self.box_info.left_padding;
             self.box_info = box_info;
             self.input_offset += self.box_info.left_padding;
+            self.buffer.set_size((self.lines_to_show(), self.box_info.width));
+            self.buffer.set_column(self.box_info.left_padding);
             self.screen = if self.end { Screen::Punctuation } 
                 else { Screen::DictMode }
         } else {
@@ -183,102 +179,32 @@ impl State {
         key.modifiers != none { return Ok(()); }
         match key.code {
             KeyCode::Char(c) => {
-                self.type_char(c)?;
+                self.buffer.type_char(c);
+                if c.is_whitespace() {
+                    self.typed_word.clear();
+                    self.input_offset = self.box_info.left_padding;
+                } else {
+                    self.typed_word.push(c);
+                    self.input_offset += 1;
+                }
             },
 
             KeyCode::Backspace => {
-                self.backspace()?;
+                self.buffer.backspace();
+                self.typed_word.pop().map(|_| self.input_offset -= 1);
             },
+
+            // Controles para cambiar tamaño
 
             _ => (),
         }
         return Ok(());
     }
 
-    fn type_char(&mut self, c : char) -> io::Result<()> {
-        if c.is_whitespace() {
-            let next_word = self.lines[0].next_word(&self.typed_word);
-            if let Ok(word_state) = next_word {
-                self.n_total_words += 1;
-                if let WordState::Correct = word_state {
-                    self.n_correct_words += 1;
-                }
-            } else {
-                self.n_total_words += 1;
-                if let Err(WordState::Correct) = next_word {
-                    self.n_correct_words += 1;
-                }
-                self.next_line()?;
-            }
-            self.typed_word.clear();
-            self.input_offset = self.box_info.left_padding;
-            print_empty_width(self.box_info.left_padding, self.box_info.width)?;
-            self.print_selected_line()?;
-        } else if !c.is_control() {
-            self.typed_word.push(c);
-            write!(stdout(), "{}", c)?;
-            if self.input_offset + 1 < self.box_info.left_padding + self.box_info.width {
-                self.input_offset += 1;
-            }
-            self.lines[0].typed(&self.typed_word);
-            self.print_selected_line()?;
-        } 
-        stdout().flush()?;
-        return Ok(());
-    }
-
-    fn backspace(&mut self) -> io::Result<()> {
-        if self.input_offset > self.box_info.left_padding {
-            self.input_offset -= 1;
-            queue!(stdout(), MoveLeft(1))?;
-            write!(stdout(), " ")?;
-            queue!(stdout(), MoveLeft(1))?;
-            self.typed_word.pop();
-            self.lines[0].typed(&self.typed_word);
-            self.print_selected_line()?;
-            stdout().flush()?;
-        }
-        return Ok(());
-    }
-
-
-    fn print_selected_line(&mut self) -> io::Result<()> {
-        queue!(stdout(), 
-            MoveUp(self.lines_to_show() as u16 + 1),
-            MoveToColumn(self.box_info.left_padding))?;
-
-        write!(stdout(), "{}", self.lines[0])?;
-
-        self.go_to_input()?;
-
-        return Ok(());
-    }
-
-    fn next_line(&mut self) -> io::Result<()> {
-        self.lines.pop_front(); 
-        self.lines.push_back(MecanoLine::new(
-            self.words_source.yield_words(),
-            self.config.config_line
-        ));
-        self.input_offset = self.box_info.left_padding;
-        self.lines[0].select(); 
-        self.print_lines()?;
-        return Ok(());
-    }
-
     fn print_lines(&mut self) -> io::Result<()> {
-
         queue!(stdout(),
             MoveTo(self.box_info.left_padding, self.box_info.top_padding))?;
-        for line in self.lines.iter().take(self.lines_to_show() as usize) {
-            print_empty_width(self.box_info.left_padding, self.box_info.width)?;
-            queue!(stdout(), 
-                MoveToColumn(self.box_info.left_padding))?;
-            write!(stdout(), "{}{}{}",
-                line,
-                MoveDown(1), 
-                MoveToColumn(self.box_info.left_padding))?;
-        }
+        write!(stdout(), "{}", self.buffer)?;
         self.go_to_input()?;
         return Ok(());
     }
@@ -320,7 +246,6 @@ impl Drop for State {
 }
 
 #[cfg(test)]
-
 mod test {
     use std::thread;
     use std::time::Duration;

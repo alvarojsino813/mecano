@@ -4,7 +4,21 @@ pub mod dictionary;
 pub mod file;
 
 pub trait MecanoMode {
-    fn yield_words(&mut self) -> Vec<String>;
+    fn yield_word(&mut self) -> &str;
+
+    fn yield_words(&mut self) -> Vec<String> {
+        let mut words_yielded : Vec<String> = Vec::new();
+
+        let mut width = 0;
+
+        while width <= 80 {
+            let rand_word = self.yield_word();
+            width += rand_word.chars().count() as u16 + 1;
+            words_yielded.push(rand_word.to_string());
+        }
+
+        return words_yielded;
+    }
 }
 
 pub enum Mode {
@@ -13,11 +27,11 @@ pub enum Mode {
 }
 
 impl Mode {
-    pub fn yield_words(&mut self) -> Vec<String> {
+    pub fn yield_word(&mut self) -> &str {
 
         return match self {
-            Mode::File(mecano_file) => mecano_file.yield_words(),
-            Mode::Dictionary(mecano_dictionary) => mecano_dictionary.yield_words(),
+            Mode::File(f) => f.yield_word(),
+            Mode::Dictionary(d) => d.yield_word(),
         }
     }
 

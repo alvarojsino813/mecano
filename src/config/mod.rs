@@ -7,37 +7,19 @@ use crate::find_path_to_file;
 use crate::modes::Mode;
 
 #[derive(Debug, Clone, Copy, Deserialize)]
-pub struct ConfigLine {
-    bg_selected : Color,
-    bg_wrong : Color,
-    fg_wrong : Color,
-    fg_correct : Color,
+pub struct ConfigBuffer {
+    pub selected : Color,
+    pub wrong : Color,
+    pub correct : Color,
 }
 
-impl ConfigLine {
-    pub fn _default() -> ConfigLine {
-        return ConfigLine {
-            bg_selected : Color::Rgb{r : 128, g : 128, b : 128},
-            bg_wrong : Color::Rgb{r : 255, g : 128, b : 128},
-            fg_correct : Color::Rgb{r : 64, g : 255, b : 64},
-            fg_wrong : Color::Rgb{r : 255, g : 64, b : 64},
+impl ConfigBuffer {
+    pub fn _default() -> ConfigBuffer {
+        return ConfigBuffer {
+            selected : Color::Rgb{r : 128, g : 128, b : 128},
+            wrong : Color::Rgb{r : 255, g : 128, b : 128},
+            correct : Color::Rgb{r : 255, g : 64, b : 64},
         };
-    }
-
-    pub fn get_bg_selected(&self) -> Color {
-        return self.bg_selected;
-    }
-
-    pub fn get_bg_wrong(&self) -> Color {
-        return self.bg_wrong;
-    }
-
-    pub fn get_fg_wrong(&self) -> Color {
-        return self.fg_wrong;
-    }
-
-    pub fn get_fg_correct(&self) -> Color {
-        return self.fg_correct;
     }
 }
 
@@ -46,7 +28,7 @@ pub struct Config {
     pub width : u16,
     pub max_time : u64,
     pub lines_to_show : u16,
-    pub config_line : ConfigLine,
+    pub config_line : ConfigBuffer,
     pub mode : String,
     pub file : String,
     pub fps : u16,
@@ -57,7 +39,7 @@ impl Config {
         Config { 
             width : 80,
             max_time : 60,
-            config_line : ConfigLine::_default(),
+            config_line : ConfigBuffer::_default(),
             lines_to_show : 2,
             mode : "dictionary".to_string(),
             file : find_path_to_file("100_spanish").expect("file not found"),

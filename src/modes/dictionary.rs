@@ -29,21 +29,11 @@ impl MecanoDictionary {
 }
 
 impl MecanoMode for MecanoDictionary {
-    fn yield_words(&mut self) -> Vec<String> {
-        let mut words_yielded : Vec<String> = Vec::new();
+    fn yield_word(&mut self) -> &str {
+        let word = self.possible_words
+            [random(self.possible_words.len() - 1)].as_str();
 
-        let mut width = 0;
-
-        while width <= self.max_width {
-            let rand_word = self.possible_words
-                [random(self.possible_words.len() - 1)].as_str();
-            width += rand_word.chars().count() as u16 + 1;
-            words_yielded.push(rand_word.to_string());
-        }
-
-        words_yielded.pop();
-
-        return words_yielded;
+        return word;
     }
 }
 
