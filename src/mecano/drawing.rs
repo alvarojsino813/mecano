@@ -22,8 +22,10 @@ impl BoxInfo {
             size,
         })
     }
+}
 
-    pub fn default() -> BoxInfo {
+impl Default for BoxInfo {
+    fn default() -> Self {
         let size = crossterm::terminal::size().unwrap();
 
         BoxInfo {
@@ -33,13 +35,6 @@ impl BoxInfo {
             size,
         }
     }
-}
-
-pub fn print_empty_width(offset : u16, box_width : u16) -> io::Result<()> {
-    queue!(stdout(), MoveToColumn(offset))?; 
-    let empty = " ".repeat(box_width as usize);
-    write!(stdout(), "{}", empty)?;
-    Ok(())
 }
 
 pub fn draw_too_narrow() -> io::Result<()> {
