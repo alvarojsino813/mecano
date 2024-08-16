@@ -1,8 +1,4 @@
-pub struct Help;
-
-impl Help {
-    pub fn help_text() -> &'static str {
-
+pub fn help_text() -> &'static str {
 "Mecano, a typing train
 
 Usage: mecano [OPTIONS] [FLAGS]
@@ -15,8 +11,5 @@ OPTIONS:
 FLAGS:
     -v, --version               Print version 
     -h, --help                  Print help
-    -l --list-dictionaries      List all dicitonaries. You can add more at ~/.config/mecano/dictionaries
-"
-
-    }
+    -l --list-dictionaries      List all dicitonaries. You can add more at ~/.config/mecano/dictionaries"
 }

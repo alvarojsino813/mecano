@@ -1,15 +1,13 @@
+use std::time::Duration;
 use std::{env, fs};
-use std::path::Path;
 use std::io::{self, Error, ErrorKind};
-use config::Config;
 
-use mecano::Mecano;
-use crate::help::Help;
+use mecano::config::Config;
 
-mod config;
-mod mecano;
-mod modes;
-mod help;
+use mecano::engine::Mecano;
+use mecano::{find_path_to_file, healthy_file};
+
+use mecano::cli::response_text::help_text;
 
 fn main() -> io::Result<()> {
 
@@ -42,8 +40,8 @@ fn main() -> io::Result<()> {
                 };
 
                 if let Ok(path) = find_path_to_file(file) {
-                    config.file = path;
-                    config.mode = "dictionary".to_string();
+                    config.set_file(&path);
+                    config.set_mode("dictionary");
                 } else {
                     println!("file not found: {}", file);
                     return Ok(());
@@ -60,8 +58,8 @@ fn main() -> io::Result<()> {
                 };
 
                 if let Ok(path) = find_path_to_file(file) {
-                    config.file = path;
-                    config.mode = "file".to_string();
+                    config.set_file(&path);
+                    config.set_mode("file");
                 } else {
                     println!("file not found: {}", file);
                     return Ok(());
@@ -69,20 +67,22 @@ fn main() -> io::Result<()> {
             }
 
             "-t" | "--time" => {
-                config.max_time = args_iter
+                let max_time = args_iter
                     .next()
                     .unwrap_or(&"0".to_string())
                     .parse::<u64>()
                     .unwrap_or(0);
 
-                if config.max_time < 2 {
+                config.set_max_time(max_time);
+
+                if config.get_max_time() < Duration::from_secs(1) {
                     println!("invalid or missing time");
                     return Ok(());
                 }
             }
 
             "-h" | "--help" => {
-                println!("{}", Help::help_text());
+                println!("{}", help_text());
                 return Ok(());
             }
 
@@ -121,35 +121,3 @@ fn main() -> io::Result<()> {
     return Ok(());
 }
 
-fn find_path_to_file(input : &str) -> io::Result<String> {
-    let mut file = input.to_string();
-    if input.chars().next().unwrap_or('\0') == '~' {
-        file = env::var("HOME").unwrap() + &file[1..file.chars().count() - 1];
-    }
-    let home_config = env::var("HOME").unwrap() + "/.config/mecano/";
-    let paths_to_search = vec![
-        file.clone(),
-        home_config.clone() + &file,
-        home_config + "dictionaries/" + &file,
-        "/usr/share/mecano/".to_string() + &file,
-        "/usr/share/mecano/dictionaries/".to_string() + &file,
-    ];
-
-
-    for path in paths_to_search {
-        if let Ok(()) = healthy_file(&path) {
-            return Ok(path);
-        }
-    }
-    return Err(Error::new(ErrorKind::NotFound, "file not found"));
-}
-
-fn healthy_file(path : &str) -> io::Result<()> {
-    let file_result = std::fs::File::open(Path::new(&path));
-    if let Ok(_) = file_result {
-        return Ok(());
-    } else {
-        return Err(Error::new(ErrorKind::NotFound,
-            format!("{path}: file not found")));
-    }
-}
