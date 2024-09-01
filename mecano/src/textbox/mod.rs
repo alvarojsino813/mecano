@@ -1,9 +1,14 @@
 use std::{
-    cmp::min, fmt::{Display, Formatter}, io::{self, stdout, Write}, slice::Iter, str::Chars, time::Duration
+    cmp::min,
+    fmt::{Display, Formatter},
+    io::{self, stdout, Write},
+    slice::Iter, time::Duration
 };
 
 use crossterm::{
-    cursor::{MoveDown, MoveToColumn, MoveUp}, queue, style::{Attribute, Color, Print, SetAttribute, SetForegroundColor}
+    cursor::{MoveDown, MoveToColumn, MoveUp}, 
+    style::{Attribute, Color, Print, SetAttribute, SetForegroundColor},
+    queue
 };
 
 use self::word::StatefulChar;
@@ -11,14 +16,22 @@ use self::word::StatefulChar;
 use super::{Count, Idx, TermUnit};
 
 use crate::{
-    config::ConfigTextBox, 
-    engine::Punct,
+    config::Theme, 
+    punctuation::Punct,
     mode::WordSource,
 };
 
+use word::Word;
+
 mod word;
 
-use word::{Word, State};
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum State {
+    Right,
+    Wrong,
+    Unreached,
+    Selected,
+}
 
 pub struct Text {
     words : Vec<Word>,
@@ -27,7 +40,7 @@ pub struct Text {
     word_print_offset : Idx,
     line_chars : TermUnit,
     total_chars_to_show : Count,
-    config : ConfigTextBox,
+    theme : Theme,
     size : (TermUnit, TermUnit),
     column : TermUnit,
     total_duration : Duration,
@@ -37,7 +50,7 @@ pub struct Text {
 impl Text {
 
     pub fn new(words_source : Box<dyn WordSource>, 
-        config : ConfigTextBox,
+        config : Theme,
         dur : Duration, 
         size : (TermUnit, TermUnit)) -> Text {
 
@@ -50,7 +63,7 @@ impl Text {
             word_print_offset : 0,
             line_chars : 0,
             total_chars_to_show : 0,
-            config,
+            theme: config,
             size, 
             column : 0,
             total_duration : dur,
@@ -65,11 +78,7 @@ impl Text {
     }
 
     fn print_word(&self, word : &Word, max_width : TermUnit) -> io::Result<TermUnit> {
-        return print_word(&self.config, word, max_width);
-    }
-
-    fn print_stateful_chars(&self, chars : Iter<StatefulChar>) -> io::Result<()> {
-        return print_stateful_chars(&self.config, chars);
+        return print_word(&self.theme, word, max_width);
     }
 
     fn print_selected_word(&self) -> io::Result<TermUnit> {
@@ -88,28 +97,23 @@ impl Text {
     }
 
     pub fn type_char(&mut self, c : char) -> io::Result<()> {
-        self.words[self.selected_word]
-            .push_duration(self.last_key_duration);
 
-        if !c.is_whitespace() {
-            let n_extra_before = self.words[self.selected_word].n_extra();
+        let n_extra_before = self.words[self.selected_word].n_extra();
+        self.words[self.selected_word].type_char(c, self.last_key_duration);
+        self.last_key_duration = Duration::ZERO;
+        let n_extra_now = self.words[self.selected_word].n_extra();
 
-            self.words[self.selected_word]
-                .type_char(c);
-
-            let n_extra_now = self.words[self.selected_word].n_extra();
-
-            // Print change
-            if n_extra_now != n_extra_before {
-                write!(stdout(), "{self}")?;
-            } else {
-                self.print_selected_word()?;
-            }
-
+        // Print all if changed extra
+        if n_extra_now != n_extra_before {
+            write!(stdout(), "{self}")?;
         } else {
+            self.print_selected_word()?;
+        }
+
+        if c.is_whitespace() {
             self.next_word()?;
         }
-        self.last_key_duration = Duration::ZERO;
+
         return Ok(());
     }
 
@@ -167,52 +171,12 @@ impl Text {
         return &self.total_duration; 
     }
 
-    pub fn get_punct(&self, total_time : Duration) -> Punct {
-
-        let mut c_right : Count = 0;
-        let mut c_wrong : Count = 0;
-        let mut c_extra : Count = 0;
-        let mut c_missed : Count = 0;
-        let mut w_right : Count = 0;
-        let mut w_wrong : Count = 0;
-
-        for i in self.words.iter() {
-            let w_punct = i.get_punct();
-
-            c_right += w_punct.right;
-            c_wrong += w_punct.wrong;
-            c_extra += w_punct.extra;
-            c_missed += w_punct.missed;
-
-            match w_punct.state {
-                State::Right => w_right += 1,
-                State::Wrong => w_wrong += 1,
-                _ => (),
-            }
+    pub fn get_punct(&self) -> Punct {
+        let mut punct = Punct::new();
+        for word in &self.words {
+            punct.push_punct_word(word.get_punct());
         }
-
-        let wpm = 
-        (c_right) as f64 / total_time.as_secs_f64() * 60.0 / 5.0;
-        
-        let raw = 
-        (c_right + c_wrong) as f64 / total_time.as_secs_f64() * 60.0 / 5.0;
-        
-        let acc = 
-        w_right as f64 / (w_right + w_wrong) as f64;
-
-        let mecano_punct = Punct {
-            c_right ,
-            c_wrong ,
-            c_extra ,
-            c_missed ,
-            w_right ,
-            w_wrong ,
-            wpm ,
-            raw ,
-            acc ,
-        };
-
-        return mecano_punct;
+        return punct;
     }
 
     fn complete_size(&mut self) {
@@ -238,7 +202,6 @@ impl Text {
 
 
 impl Display for Text {
-    // REFACTOR
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let go_to_column = MoveToColumn(self.column);
         write!(f, "{go_to_column}")?;
@@ -284,7 +247,7 @@ impl Display for Text {
     }
 }
 
-fn print_word(config : &ConfigTextBox, word : &Word, max_width : TermUnit) -> io::Result<TermUnit> {
+fn print_word(config : &Theme, word : &Word, max_width : TermUnit) -> io::Result<TermUnit> {
     // This case should be ckecked upfront
     assert!(max_width >= word.n_chars());
     if word.is_selected() {
@@ -296,7 +259,7 @@ fn print_word(config : &ConfigTextBox, word : &Word, max_width : TermUnit) -> io
     if max_width >= word.n_chars_and_extra() + 1 {
         print_stateful_chars(config, word.chars())?;
         let extra = word.extra();
-        queue!(stdout(), SetForegroundColor(config.wrong))?;
+        queue!(stdout(), SetForegroundColor(config.get_wrong()))?;
         write!(stdout(), "{extra}")?;
         queue!(stdout(), SetForegroundColor(Color::Reset))?;
         n_chars_printed = word.n_chars_and_extra() + 1; 
@@ -307,7 +270,7 @@ fn print_word(config : &ConfigTextBox, word : &Word, max_width : TermUnit) -> io
         let remaining_width = max_width - word.n_chars();
 
         if remaining_width > 2 {
-            queue!(stdout(), SetForegroundColor(config.wrong))?;
+            queue!(stdout(), SetForegroundColor(config.get_wrong()))?;
             let extra_to_print = word
                 .extra()
                 .chars()
@@ -343,11 +306,11 @@ fn print_word(config : &ConfigTextBox, word : &Word, max_width : TermUnit) -> io
         print_stateful_chars(config, word_but_last.chars())?;
 
         if word.n_extra() > 0 {
-            queue!(stdout(), SetForegroundColor(config.wrong))?;
+            queue!(stdout(), SetForegroundColor(config.get_wrong()))?;
             let last_extra = word.extra().chars().last().unwrap();
             write!(stdout(), "{last_extra}")?;
         } else {
-            queue!(stdout(), SetForegroundColor(config.right))?;
+            queue!(stdout(), SetForegroundColor(config.get_right()))?;
             let last_char = word.chars().last().unwrap().c;
             write!(stdout(), "{last_char}")?;
         }
@@ -362,12 +325,12 @@ fn print_word(config : &ConfigTextBox, word : &Word, max_width : TermUnit) -> io
     return Ok(n_chars_printed);
 }
 
-fn print_stateful_chars(config : &ConfigTextBox, chars : Iter<StatefulChar>) -> io::Result<()> {
+fn print_stateful_chars(config : &Theme, chars : Iter<StatefulChar>) -> io::Result<()> {
     for character in chars {
         let color = match character.state {
-            State::Right => config.right,
-            State::Wrong => config.wrong,
-            State::Selected => config.selected,
+            State::Right => config.get_right(),
+            State::Wrong => config.get_wrong(),
+            State::Selected => config.get_selected(),
             State::Unreached => Color::Reset,
         };
         queue!(stdout(), 
@@ -380,7 +343,9 @@ fn print_stateful_chars(config : &ConfigTextBox, chars : Iter<StatefulChar>) -> 
 #[cfg(test)]
 
 mod test {
-    use crate::config::ConfigTextBox;
+    use std::time::Duration;
+
+    use crate::config::Theme;
 
     use super::{print_word, word::Word};
 
@@ -394,10 +359,10 @@ mod test {
         let incorrect = "pruebaeeee";
 
         for c in incorrect.chars() {
-            word.type_char(c);
+            word.type_char(c, Duration::ZERO);
         }
 
         assert!(word.n_chars() == 6);
-        let _ = print_word(&ConfigTextBox::default(), &word, 8);
+        let _ = print_word(&Theme::default(), &word, 8);
     }
 }

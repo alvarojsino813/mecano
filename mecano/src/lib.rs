@@ -1,3 +1,6 @@
+pub const NAME : &'static str = "mecano";
+pub const VERSION : &'static str = "0.2.0";
+
 use std::io;
 use std::io::{Error, ErrorKind};
 use std::env;
@@ -14,7 +17,7 @@ pub type Idx = usize;
 pub type TermUnit = u16;
 pub type Count = u64;
 
-pub fn find_path_to_file(input : &str) -> io::Result<String> {
+pub fn path_to_file(input : &str) -> io::Result<String> {
     let mut file = input.to_string();
     if input.chars().next().unwrap_or('\0') == '~' {
         file = env::var("HOME").unwrap() + &file[1..file.chars().count() - 1];

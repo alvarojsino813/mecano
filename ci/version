@@ -1,0 +1,5 @@
+#!/bin/bash
+
+sed -i "s/^version = \".*\"$/version = \"$1\"/g" mecano/Cargo.toml
+sed -i "s/^pub const VERSION .*$/pub const VERSION : \&'static str = \"$1\";/g" mecano/src/lib.rs
+sed -i "s/^pkgver='.*'$/pkgver='$1'/g" PKGBUILD

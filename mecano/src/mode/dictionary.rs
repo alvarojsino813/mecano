@@ -46,7 +46,7 @@ fn random(top : Idx) -> Idx {
 #[cfg(test)]
 mod test {
 
-    use crate::find_path_to_file;
+    use crate::path_to_file;
 
     use super::SourceDictionary;
     use super::WordSource;
@@ -55,7 +55,7 @@ mod test {
     fn printing_words() {
 
         let dict = SourceDictionary::new(
-            &find_path_to_file("100_spanish").unwrap());
+            &path_to_file("100_spanish").unwrap());
 
         assert_eq!(dict.possible_words.len(), 100);
     }
@@ -64,7 +64,7 @@ mod test {
     fn true_random() {
 
         let mut dict = SourceDictionary::new(
-            &find_path_to_file("100_spanish").unwrap());
+            &path_to_file("100_spanish").unwrap());
 
         let left_line = dict.yield_words();
         let right_line = dict.yield_words();

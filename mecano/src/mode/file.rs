@@ -34,24 +34,24 @@ impl WordSource for SourceFile {
         return word;
     }
 
-    fn name(&self) -> String { String::from("file") }
-
     fn from_config(config : &crate::config::Config) -> Self {
         return Self::new(&config.get_file());
     }
+
+    fn name(&self) -> String { String::from("file") }
 }
 
 #[cfg(test)]
 
 mod test {
-    use crate::{find_path_to_file, mode::WordSource};
+    use crate::{path_to_file, mode::WordSource};
 
     use super::SourceFile;
 
 
     #[test]
     fn file_deterministic() {
-        let path = &find_path_to_file("100_spanish").unwrap();
+        let path = &path_to_file("100_spanish").unwrap();
         let mut mecano_file = SourceFile::new(path);
 
         let contents = std::fs::read_to_string(path).unwrap();

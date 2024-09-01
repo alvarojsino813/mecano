@@ -1,25 +1,29 @@
 # Maximum width of each line
-width = 80
+# width = 80
 
-# Time for each try
-max_time = 60
+# Game time for the test
+# max_time = 60
 
-# Max lines shown to type
-lines_to_show = 2
+# Max lines shown
+# lenght = 2
 
-# file 
-file = "100_spanish"
+# File from which words are taken
+# file = "100_spanish"
 
-# mode [ dictionary | file ]
-mode = "dictionary"
+# Play mode. [ dictionary | file ]
+# mode = "dictionary"
 
-# fps
-fps = 120
+# update rate: 1000 suggested value
+# rate = 1000
 
-# Line configuration
-[config_line]
+# Color theme (more coming soon)
+# [theme] # Uncomment this line to change theme
 
-# Colors for each state of the line
-selected = "#888888"
-wrong = "#FF8888"
-correct = "#44FF44"
+# Selected char color
+# selected = "#888888"
+
+# Wrong char color
+# wrong = "#FF8888"
+
+# Right char color
+# right = "#44FF44"

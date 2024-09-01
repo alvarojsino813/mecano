@@ -14,12 +14,13 @@ use crossterm::{
     execute, queue, 
 };
 
-use super::{ Count, TermUnit };
+use super::TermUnit;
 
 use crate::{
     config::Config, 
     mode::{SourceDictionary, SourceFile, WordSource}, 
-    textbox::Text,
+    punctuation::Punct,
+    textbox::Text
 };
 
 #[derive(Debug)]
@@ -27,22 +28,10 @@ enum Engine {
     Ready,
     Stop,
     Run,
-    ShowPunctuation,
+    ShowPunct,
     TooNarrow
 }
 
-#[derive(Debug, Copy, Clone)]
-pub struct Punct {
-    pub c_right : Count,
-    pub c_wrong : Count,
-    pub c_extra : Count,
-    pub c_missed : Count,
-    pub w_right : Count,
-    pub w_wrong : Count,
-    pub wpm : f64,
-    pub raw : f64,
-    pub acc : f64,
-}
 
 pub struct BoxInfo {
     pub left_padding : TermUnit,
@@ -85,7 +74,6 @@ pub struct Mecano {
     typed_word : String,
     textbox : Text,
     box_info : BoxInfo,
-    config : Config,
     width : TermUnit,
     lines_to_show : TermUnit,
     engine : Engine,
@@ -95,7 +83,7 @@ pub struct Mecano {
 impl Mecano {
 
     pub fn play(config : Config) -> io::Result<()> {
-        let fps = config.get_fps();
+        let fps = config.get_rate();
         let frame_duration = Duration::from_secs_f64(1.0 / fps as f64);
         let mut delta;
         let mut chrono = Instant::now();
@@ -106,7 +94,7 @@ impl Mecano {
         while !engine.is_ended() {
 
             while let Ok(true) = poll(Duration::ZERO) {
-                if !engine.is_running() {
+                if !engine.is_running() && !engine.is_too_narrow() {
                     engine.run();
                 }
                 let keep_going = engine.event_read()?;
@@ -126,7 +114,6 @@ impl Mecano {
 
         engine.draw()?;
         loop {
-
             while let Ok(true) = poll(Duration::ZERO) {
                 if !engine.event_read()? {
                     return Ok(());
@@ -167,7 +154,6 @@ impl Mecano {
             engine : Engine::Ready,
             width : config.get_width(),
             lines_to_show : config.get_lenght(),
-            config,
             punct : None,
         };
 
@@ -193,11 +179,11 @@ impl Mecano {
             } 
     }
 
-    fn end(&mut self) { self.engine = Engine::ShowPunctuation; }
+    fn end(&mut self) { self.engine = Engine::ShowPunct; }
 
     fn is_ended(&mut self) -> bool { 
         return match self.engine { 
-            Engine::ShowPunctuation => true,
+            Engine::ShowPunct => true,
             _ => false,
             } 
     }
@@ -217,7 +203,7 @@ impl Mecano {
             _ => false,
             } 
     }
-    
+
     fn update_time(&mut self, elapsed : Duration) -> io::Result<()> {
         let keep_going = self.textbox.update_time(elapsed);
         if !keep_going {
@@ -238,16 +224,14 @@ impl Mecano {
         let real_size = crossterm::terminal::size().unwrap();
 
         if let Ok(box_info) = BoxInfo::centered(self.width, real_size) {
-            self.input_offset -= self.box_info.left_padding;
             self.box_info = box_info;
-            self.input_offset += self.box_info.left_padding;
             self.textbox.set_size((self.box_info.width, self.lines_to_show()));
             self.textbox.set_column(self.box_info.left_padding);
 
             if self.is_ended() { 
-                self.engine = Engine::ShowPunctuation;
+                self.engine = Engine::ShowPunct;
             } 
-        } else {
+        } else if !self.is_ended() {
             self.too_narrow();
         }
 
@@ -258,7 +242,7 @@ impl Mecano {
             Engine::Ready => {
                 self.draw_ready()?;
             }
-            Engine::ShowPunctuation => {
+            Engine::ShowPunct => {
                 self.draw_punct()?;
             }
             Engine::TooNarrow => {
@@ -297,38 +281,29 @@ impl Mecano {
         return Ok(());
     }
 
-    // REFACTOR
     fn draw_punct(&mut self) -> io::Result<()> {
+        queue!(stdout(), Clear(ClearType::All))?;
+        let size = crossterm::terminal::size()?;
+        self.draw_box(self.outter_box_pos(), size)?;
         if let None = self.punct {
             self.punct = Some(self.textbox
-                .get_punct(self.config.get_max_time()));
+                .get_punct());
         }
 
-        let punct = &self.punct.unwrap();
+        // This if is always true
+        if let Some(p) = &mut self.punct {
+            let mut size = size;
+            size.0 -= min(size.0, 2);
+            size.1 -= min(size.1, 2);
+            p.set_pos((1, 1));
+            p.set_size(size);
+        }
 
-        self.draw_box((0, 0), self.box_info.size)?;
-        queue!(stdout(),
-            MoveTo(self.box_info.size.0 / 2 - 8, self.box_info.size.1 / 2 - 3))?;
-
-        write!(stdout(), "WPM:   {:.1}", punct.wpm)?;
-        queue!(stdout(),
-            MoveTo(self.box_info.size.0 / 2 - 8,
-                self.box_info.size.1 / 2 - 2))?;
-
-        write!(stdout(), "RAW:   {:.1}", punct.raw)?;
-        queue!(stdout(),
-            MoveTo(self.box_info.size.0 / 2 - 8,
-                self.box_info.size.1 / 2 - 1))?;
-
-        write!(stdout(), "ACC:   {:.2}%", punct.acc * 100.0)?;
-        queue!(stdout(),
-            MoveTo(self.box_info.size.0 / 2 - 8,
-                self.box_info.size.1 / 2 + 2))?;
-
-
-        write!(stdout(), "<ESC> to exit")?;
+        let punct = self.punct.as_ref().unwrap();
+        write!(stdout(), "{punct}")?;
         queue!(stdout(), cursor::Hide)?;
         stdout().flush()?;
+
         return Ok(());
     }
 
@@ -397,7 +372,8 @@ impl Mecano {
                     self.input_offset = self.box_info.left_padding;
                 } else {
                     self.typed_word.push(c);
-                    self.input_offset += 1;
+                    self.input_offset = self.box_info.left_padding + std::cmp::min(
+                        self.typed_word.chars().count() as u16, self.width - 1);
                 }
                 self.print_input()?;
             },
@@ -463,8 +439,14 @@ impl Mecano {
         self.go_to_input_beginning()?;
         self.print_blank()?;
         self.go_to_input_beginning()?;
-        let input = &self.typed_word;
-        write!(stdout(), "{input}")?;
+        let max = std::cmp::min(self.typed_word.len(), self.width as usize);
+        if max > 0 {
+            let input_but_last : String= self.typed_word.chars().take(max - 1).collect();
+            write!(stdout(), "{input_but_last}")?;
+        }
+        if let Some(c) = self.typed_word.chars().last() {
+            write!(stdout(), "{c}")?;
+        }
         self.go_to_input()?;
         return Ok(());
     }
@@ -535,14 +517,27 @@ impl Mecano {
         if let Ok(event) = read() {
             match event {
                 Event::Key(k) => {
-                    return self.type_key_event(k);
+                    if !self.is_too_narrow() {
+                        return self.type_key_event(k);
+                    } 
                 },
                 Event::Resize(_, _) => {
-                    self.stop();
+                    if !self.is_ended() {
+                        self.stop();
+                    }
                     self.draw()?;
                 }
-                Event::FocusGained => self.stop(),
-                Event::FocusLost => self.stop(),
+                Event::FocusGained => {
+                    if !self.is_ended() {
+                        self.run();
+                    }
+                }
+                Event::FocusLost => {
+                    if !self.is_ended() {
+                        self.stop();
+                    }
+                }
+
                 _ => (),
             }
         }
@@ -563,7 +558,7 @@ mod test {
 
     use crossterm::event::{poll, KeyCode, KeyEvent, KeyModifiers};
 
-    use crate::{config::Config, engine::Mecano, find_path_to_file};
+    use crate::{config::Config, engine::Mecano, path_to_file};
 
 
     #[test]
@@ -576,7 +571,7 @@ mod test {
         let _ = stdout().flush();
         let frame_duration = Duration::from_millis(100);
 
-        let find_path_to_file = find_path_to_file("100_spanish").unwrap();
+        let find_path_to_file = path_to_file("100_spanish").unwrap();
         let contents = std::fs::read_to_string(find_path_to_file)
             .unwrap();
         let mut text : String = String::new();
@@ -612,14 +607,17 @@ mod test {
             let _ = state.update_time(frame_duration);
         }
 
-        let punct = state.textbox.get_punct(state.config.get_max_time());
+        let punct = state.textbox.get_punct();
 
-        assert_eq!(punct.c_wrong, 0);
-        assert_eq!(punct.c_extra, 0);
-        assert_eq!(punct.c_missed, 0);
-        assert_eq!(punct.c_right, (1.0 / frame_duration.as_secs_f64() * 60.0) as u64 - spaces);
-        assert_eq!(punct.acc, 1.0);
-        assert_eq!(punct.raw, punct.wpm);
+        let (c_right, c_wrong, c_extra, c_missed, raw, wpm, acc) =
+        punct.get_raw_info();
+
+        assert_eq!(c_wrong, 0);
+        assert_eq!(c_extra, 0);
+        assert_eq!(c_missed, 0);
+        assert_eq!(c_right, (1.0 / frame_duration.as_secs_f64() * 60.0) as u64 - spaces);
+        assert_eq!(raw, wpm);
+        assert_eq!(acc, 1.0);
     }
 
 
@@ -673,7 +671,7 @@ mod test {
         let mut state = Mecano::new(config).unwrap();
         let _ = state.draw();
 
-        let find_path_to_file = find_path_to_file("100_spanish").unwrap();
+        let find_path_to_file = path_to_file("100_spanish").unwrap();
         let contents = std::fs::read_to_string(find_path_to_file)
             .unwrap();
         let mut text : String = String::new();
