@@ -1,5 +1,5 @@
 pub const NAME : &'static str = "mecano";
-pub const VERSION : &'static str = "0.2.1";
+pub const VERSION : &'static str = "0.2.0";
 
 use std::io;
 use std::io::{Error, ErrorKind};

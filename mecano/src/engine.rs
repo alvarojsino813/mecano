@@ -564,14 +564,14 @@ mod test {
     #[test]
     // REFACTOR
     fn keys_all_right() {
-        let config = Config::default();
+        let config = Config::default_test();
         let mut state = Mecano::new(config).unwrap();
 
         let _ = state.draw();
         let _ = stdout().flush();
         let frame_duration = Duration::from_millis(100);
 
-        let find_path_to_file = path_to_file("100_spanish").unwrap();
+        let find_path_to_file = path_to_file("100_english").unwrap();
         let contents = std::fs::read_to_string(find_path_to_file)
             .unwrap();
         let mut text : String = String::new();
@@ -625,7 +625,7 @@ mod test {
     #[test]
     fn too_narrow() {
 
-        let config = Config::default();
+        let config = Config::default_test();
         let mut state = Mecano::new(config).unwrap();
         let _ = state.draw();
 
@@ -671,7 +671,7 @@ mod test {
         let mut state = Mecano::new(config).unwrap();
         let _ = state.draw();
 
-        let find_path_to_file = path_to_file("100_spanish").unwrap();
+        let find_path_to_file = path_to_file("100_english").unwrap();
         let contents = std::fs::read_to_string(find_path_to_file)
             .unwrap();
         let mut text : String = String::new();

@@ -13,7 +13,8 @@ use super::TermUnit;
 
 pub mod fields;
 
-const MODE : &'static str = "file";
+const MODE : &'static str = "dictionary";
+const TEST_MODE : &'static str = "file";
 const MAX_TIME_MODE : &'static str = "dictionary";
 const FILE : &'static str = "100_english";
 const WIDTH : TermUnit = 80;
@@ -94,6 +95,18 @@ impl Config {
             theme : Some(Theme::default()),
             lenght : Some(LINES_TO_SHOW),
             mode : Some(ModeField::new(MODE).unwrap()),
+            file : Some(FileField::new(FILE).unwrap()),
+            rate : Some(RATE),
+        }
+    }
+
+    pub fn default_test() -> Config {
+        Config { 
+            width : Some(WIDTH),
+            max_time : Some(MAX_TIME),
+            theme : Some(Theme::default()),
+            lenght : Some(LINES_TO_SHOW),
+            mode : Some(ModeField::new(TEST_MODE).unwrap()),
             file : Some(FileField::new(FILE).unwrap()),
             rate : Some(RATE),
         }
