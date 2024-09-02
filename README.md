@@ -1,6 +1,8 @@
 # Mecano
 
-A minimalistic typing test.
+A minimalist typing test.
+
+![Live Preview](https://github.com/alvarojsino813/mecano/blob/main/assets/mecano.gif)
 
 ## Installation
 
