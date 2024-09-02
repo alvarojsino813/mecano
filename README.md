@@ -20,14 +20,53 @@ Mecano, a typing train
 Usage: mecano [OPTIONS] [FLAGS]
 
 OPTIONS:
-    -f, --file <FILE>           Plays in file mode with the chosen file
-    -d, --dictionary <FILE>     Plays in dictionary mode with the chosen file
-    -t, --time <SECS>           Choose the game time in seconds
+-f, --file <FILE>           Plays using the chosen file or dictionary
+-m, --mode <MODE>           Plays the chosen mode
+-r, --rate <RATE>           Plays with the chosen rate. This affects time measures accuracy. The higher the better.
+-t, --time <SECS>           Choose the game time in seconds
 
 FLAGS:
-    -v, --version               Print version 
-    -h, --help                  Print help
-    -l --list-dictionaries      List all dicitonaries. You can add more at ~/.config/mecano/dictionaries
+-h, --help                  Print help
+-v, --version               Print version 
+    --list-dictionaries     List all dicitonaries. You can add more at ~/.config/mecano/dictionaries
+    --list-modes            List all available modes
+```
+
+## Configuration
+
+You can change some default values like the theme, the time or some starting values at `~/.config/mecano/config.toml`.
+The default configuration is in `/usr/share/mecano/config.toml`.
+
+```toml
+# Maximum width of each line
+width = 80
+
+# Game time for the test
+max_time = 60
+
+# Max lines shown
+lenght = 2
+
+# File from which words are taken
+file = "100_english"
+
+# Play mode. [ dictionary | file ]
+mode = "dictionary"
+
+# update rate: 1000 suggested value
+rate = 1000
+
+# Color theme (more coming soon)
+[theme] # Uncomment this line to change theme
+
+# Selected char color
+selected = "#888888"
+
+# Wrong char color
+wrong = "#FF8888"
+
+# Right char color
+right = "#44FF44"
 ```
 
 - Modify the configuration file in `~/.config/mecano/mecano.toml`
