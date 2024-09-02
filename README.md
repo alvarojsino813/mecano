@@ -1,6 +1,6 @@
 # Mecano
 
-A minimalistic typing test
+A minimalistic typing test.
 
 ## Installation
 
@@ -31,6 +31,8 @@ FLAGS:
     --list-dictionaries     List all dicitonaries. You can add more at ~/.config/mecano/dictionaries
     --list-modes            List all available modes
 ```
+
+> Tip: You can change the `TextBox` size using the arrow keys.
 
 ## Configuration
 
@@ -75,12 +77,12 @@ right = "#44FF44"
 
 - Use any file on your system
 
-## Motivation
+## Coming soon
 
-I wanted to undergo the full process of developing, publishing and maintining a software project.
-
-I was thinking about something minimalistic, and I used to do typing test on the web, so I thought making one for the terminal could be a nice idea.
-
-Part of the challenge was to develop `mecano` with almost no use of other crates.
-
-Don't hesitate on suggesting any recommendation, issue or PR.
+- [ ] A Wikipedia mode. It takes a random article from wikipedia and you complete it.
+- [ ] A command mode. The std of a command will be taken by mecano and given to you as text to complete.
+- [ ] More customization. Border colors, hiding or showing them...
+- [ ] Even more customization. Full control over the layout in-game.
+- [ ] Some fanciness. A title screen.
+- [ ] Stats. More descriptive stats about your test.
+- [ ] Better CLI. Autocomplete.
