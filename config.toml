@@ -8,7 +8,7 @@
 # lenght = 2
 
 # File from which words are taken
-# file = "100_spanish"
+# file = "100_english"
 
 # Play mode. [ dictionary | file ]
 # mode = "dictionary"

@@ -9,15 +9,13 @@ use self::fields::FieldError;
 use self::fields::FileField;
 use self::fields::ModeField;
 
-use super::path_to_file;
-
 use super::TermUnit;
 
 pub mod fields;
 
 const MODE : &'static str = "file";
 const MAX_TIME_MODE : &'static str = "dictionary";
-const FILE : &'static str = "100_spanish";
+const FILE : &'static str = "100_english";
 const WIDTH : TermUnit = 80;
 const MAX_TIME : Count = 60;
 const LINES_TO_SHOW : TermUnit = 2;
