@@ -24,7 +24,7 @@ This way the executable will be installed at `~/.cargo/bin/mecano`.
 
 You can add that path to your paths. Example for linux:
 
-`.bashrc`
+In `.bashrc`:
 ```bash
 export PATH="$HOME/.cargo/bin:$PATH"
 ```
