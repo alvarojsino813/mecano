@@ -3,6 +3,12 @@ name = "mecano"
 version = "0.2.1"
 edition = "2021"
 authors = [ "alvarojsino813" ]
+license = "unlicensed"
+description = "A minimalist typing test"
+repository = "https://github.com/alvarojsino813/mecano"
+readme = "README.md"
+keywords = ["game", "typing", "minimalist", "tui"]
+cathegories = ["games"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
