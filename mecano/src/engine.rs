@@ -351,18 +351,19 @@ impl Mecano {
 
     // REFACTOR
     fn type_key_event(&mut self, key : KeyEvent) -> io::Result<bool> {
-        if self.is_ended() { 
-            if let KeyCode::Esc = key.code {
-                return Ok(false);
-            } else {
-                return Ok(true);
+        match (key.modifiers, key.code) {
+            (_, KeyCode::Esc) => return Ok(false),
+            (KeyModifiers::CONTROL, KeyCode::Char(c)) => {
+                if c == 'c' { return Ok(false) }
             }
+            (_, _) => (),
         }
+
+        if self.is_ended() { return Ok(true); }
         if self.is_too_narrow() { return Ok(true) }
-        let shift = KeyModifiers::from_name("SHIFT").unwrap();
-        let none = KeyModifiers::empty();
-        if key.modifiers != shift &&
-        key.modifiers != none { return Ok(true) }
+        if key.modifiers != KeyModifiers::SHIFT &&
+        key.modifiers != KeyModifiers::empty() { return Ok(true) }
+
         match key.code {
             KeyCode::Char(c) => {
                 self.go_to_text()?;
@@ -377,8 +378,6 @@ impl Mecano {
                 }
                 self.print_input()?;
             },
-
-            KeyCode::Esc => return Ok(false),
 
             KeyCode::Backspace => {
                 self.go_to_text()?;
