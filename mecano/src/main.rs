@@ -1,19 +1,10 @@
-use std::{env, fs};
+use std::env;
 
 use mecano::cli::flags::flags;
-use mecano::cli::options::config_from_args;
-
+use mecano::cli::options::config_with_args;
 use mecano::engine::Mecano;
-use mecano::healthy_file;
 
 fn main() {
-
-    let config_path = 
-    env::var("HOME").expect("home directory not found") + "/.config/mecano";
-    if let Err(_) = healthy_file(&(config_path.clone() + "/mecano.toml")) {
-        let _ = 
-        fs::copy("/usr/share/mecano/mecano.toml", config_path + "/mecano.toml");
-    }
 
     let args: Vec<String> = env::args().collect();
 
@@ -23,8 +14,7 @@ fn main() {
         return;
     }
 
-    let config = config_from_args(&args);
-
+    let config = config_with_args(&args);
     if let Err(e) = &config {
         eprintln!("{e}");
         return;

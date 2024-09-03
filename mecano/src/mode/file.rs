@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::{mode::WordSource, Idx};
 
 pub struct SourceFile {
@@ -6,7 +8,7 @@ pub struct SourceFile {
 }
 
 impl SourceFile {
-    pub fn new(path_to_file : &str) -> SourceFile {
+    pub fn new(path_to_file : &PathBuf) -> SourceFile {
         let mut file_words : Vec<String> = Vec::new();
         let contents; 
         if let Ok(c) = std::fs::read_to_string(path_to_file) {

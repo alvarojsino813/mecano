@@ -1,17 +1,22 @@
-use constcat::concat;
-use crate::NAME;
+use std::path::PathBuf;
 
 pub mod flags;
 pub mod options;
-mod file_health;
 
-const MECANO_PATH : &str = "/usr/share/";
-const USER_PATH : &str = "~/.config/";
+pub fn dictionaries_path() -> PathBuf {
+    let resources_path = root_config_path().join("dictionaries");
+    return resources_path;
+}
 
-const CONFIG_FILE : &str = "config.toml";
-const MECANO_CONFIG_PATH : &str = concat!(MECANO_PATH, NAME, "/", CONFIG_FILE);
-const USER_CONFIG_PATH : &str = concat!(USER_PATH, NAME, "/", CONFIG_FILE);
+pub fn config_file_path() -> PathBuf {
+    let resources_path = root_config_path().join("config.toml");
+    return resources_path;
+}
 
-const DICT_FOLDER : &str = "dictionaries";
-const MECANO_DICTS_PATH : &str = concat!(MECANO_PATH, NAME, "/", DICT_FOLDER);
-const USER_DICTS_PATH : &str = concat!(USER_PATH, NAME, "/", DICT_FOLDER);
+fn root_config_path() -> PathBuf {
+    let root_config_path = dirs::config_dir()
+        .expect("config directory not found")
+        .join(crate::NAME);
+    return root_config_path;
+}
+

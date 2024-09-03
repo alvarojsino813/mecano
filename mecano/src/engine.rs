@@ -139,7 +139,7 @@ impl Mecano {
 
         let buffer = Text::new(
             words_source,
-            config.get_config_text_box().clone(),
+            config.get_theme().clone(),
             config.get_max_time(),
             (std::cmp::min::<TermUnit>( box_info.size.0 / 2 - 2,
                 config.get_lenght()),

@@ -2,16 +2,19 @@ use std::io;
 
 use crate::config::fields::FieldError;
 use crate::{Count, TermUnit};
-use crate::{config::Config, path_to_file};
-use crate::cli::CONFIG_FILE;
+use crate::config::Config;
 
-pub fn config_from_args(args : &Vec<String>) -> io::Result<Config> {
+use super::config_file_path;
+
+pub fn config_with_args(args : &Vec<String>) -> io::Result<Config> {
     let mut config; 
+    let config_file = config_file_path();
 
-    if let Ok(c) = Config::from_path(&path_to_file(CONFIG_FILE).unwrap()) {
+    if let Ok(c) = Config::from_path(&config_file_path()) {
         config = c;
     } else {
-        let error_msg = format!("invalid configuration in `{CONFIG_FILE}`");
+        let config_file_display = config_file.display();
+        let error_msg = format!("invalid configuration in \"{config_file_display}\"");
         return Err(io::Error::new(io::ErrorKind::InvalidData, error_msg));
     }
 

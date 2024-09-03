@@ -1,6 +1,7 @@
 use crossterm::style::Color;
 use serde::Deserialize;
 use std::io;
+use std::path::PathBuf;
 use std::time::Duration;
 
 use crate::Count;
@@ -19,7 +20,7 @@ const MAX_TIME_MODE : &'static str = "dictionary";
 const FILE : &'static str = "100_english";
 const WIDTH : TermUnit = 80;
 const MAX_TIME : Count = 60;
-const LINES_TO_SHOW : TermUnit = 2;
+const LENGHT : TermUnit = 2;
 const RATE : u16 = 1000;
 
 #[derive(Debug, Clone, Copy, Deserialize, PartialEq)]
@@ -93,9 +94,9 @@ impl Config {
             width : Some(WIDTH),
             max_time : Some(MAX_TIME),
             theme : Some(Theme::default()),
-            lenght : Some(LINES_TO_SHOW),
-            mode : Some(ModeField::new(MODE).unwrap()),
-            file : Some(FileField::new(FILE).unwrap()),
+            lenght : Some(LENGHT),
+            mode : Some(ModeField::new(MODE).expect(&format!("Default mode \"{MODE}\" failed to build"))),
+            file : Some(FileField::new(FILE).expect(&format!("Default file \"{FILE}\" failed to build"))),
             rate : Some(RATE),
         }
     }
@@ -105,9 +106,9 @@ impl Config {
             width : Some(WIDTH),
             max_time : Some(MAX_TIME),
             theme : Some(Theme::default()),
-            lenght : Some(LINES_TO_SHOW),
-            mode : Some(ModeField::new(TEST_MODE).unwrap()),
-            file : Some(FileField::new(FILE).unwrap()),
+            lenght : Some(LENGHT),
+            mode : Some(ModeField::new(TEST_MODE).expect(&format!("Default mode \"{TEST_MODE}\" failed to build"))),
+            file : Some(FileField::new(FILE).expect(&format!("Default file \"{FILE}\" failed to build"))),
             rate : Some(RATE),
         }
     }
@@ -117,14 +118,14 @@ impl Config {
             width : Some(WIDTH),
             max_time : Some(u64::MAX),
             theme : Some(Theme::default()),
-            lenght : Some(LINES_TO_SHOW),
-            mode : Some(ModeField::new(MAX_TIME_MODE).unwrap()),
-            file : Some(FileField::new(FILE).unwrap()),
+            lenght : Some(LENGHT),
+            mode : Some(ModeField::new(MAX_TIME_MODE).expect(&format!("Default mode \"{MAX_TIME_MODE}\" failed to build"))),
+            file : Some(FileField::new(FILE).expect(&format!("Default file \"{FILE}\" failed to build"))),
             rate : Some(RATE),
         }
     }
 
-    pub fn from_path(path : &str) -> io::Result<Config> {
+    pub fn from_path(path : &PathBuf) -> io::Result<Config> {
         let config = std::fs::read_to_string(path)?;
         // TO DO: Should be printed by main
         return Config::from_str(&config);
@@ -139,12 +140,9 @@ impl Config {
             let e = config.unwrap_err();
             let error_msg = e.message();
             // TO DO: Should be printed by main
-            eprintln!("{error_msg}");
             return Err(io::Error::new(io::ErrorKind::InvalidData, error_msg));
         }
     }
-
-    // REFACTOR GET AND SET
 
     pub fn get_mode(&self) -> String { 
         if let Some(mode) = &self.mode {
@@ -164,11 +162,12 @@ impl Config {
         }
     }
 
-    pub fn get_file(&self) -> String { 
+    pub fn get_file(&self) -> PathBuf { 
         if let Some(file) = &self.file {
-            return file.to_string();
+            return file.get_pathbuf().clone();
         } 
-        return Config::default().file.unwrap().to_string();
+        let default_file = Config::default().file.expect("default values shouldn't be None");
+        return default_file.get_pathbuf().clone();
     }
 
     pub fn set_file(&mut self, f : &str) -> Option<FieldError> { 
@@ -245,14 +244,14 @@ impl Config {
 
     // TO DO: Set a nice ConfigTextBox
 
-    pub fn get_config_text_box(&self) -> Theme { 
+    pub fn get_theme(&self) -> Theme { 
         if let Some(config_text_box) = self.theme {
             return config_text_box;
         } else {
             return Theme::default();
         }
     }
-    pub fn set_config_text_box(&mut self, c : Theme) { 
+    pub fn set_theme(&mut self, c : Theme) { 
         self.theme = Some(c)
     }
 
@@ -276,8 +275,8 @@ mod test {
         assert!(config.get_file() == path_to_file(config::FILE).unwrap());
         assert!(config.get_width() == config::WIDTH);
         assert!(config.get_max_time() == Duration::from_secs(config::MAX_TIME));
-        assert!(config.get_lenght() == config::LINES_TO_SHOW);
-        assert!(config.get_config_text_box() == Theme::default());
+        assert!(config.get_lenght() == config::LENGHT);
+        assert!(config.get_theme() == Theme::default());
         assert!(config.get_rate() == config::RATE);
 
     }
@@ -292,13 +291,10 @@ lines_to_show = 14
 file = \"100_spanish\"
 mode = 123
 rate = -143
-[config_text_box]
+[theme]
 selected = \"#888888\"
 wrong = \"#FF8888\"
 right = \"#44FF44\"
         ");
-
-        eprintln!("Holaaa");
-
     }
 }

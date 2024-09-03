@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::{mode::WordSource, Idx};
 
 pub struct SourceDictionary {
@@ -5,7 +7,7 @@ pub struct SourceDictionary {
 }
 
 impl SourceDictionary {
-    pub fn new(path_to_dictionary : &str) -> SourceDictionary {
+    pub fn new(path_to_dictionary : &PathBuf) -> SourceDictionary {
         let mut possible_words : Vec<String> = Vec::new();
         let contents = std::fs::read_to_string(path_to_dictionary).unwrap();
 
@@ -14,8 +16,9 @@ impl SourceDictionary {
         }
 
         if possible_words.is_empty() {
-            println!("`width` too low");
-            panic!("`width too low");
+            let error_msg = "No words in word_source";
+            eprintln!("{error_msg}");
+            panic!("{error_msg}");
         }
 
         return SourceDictionary {

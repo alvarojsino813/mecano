@@ -1,8 +1,8 @@
-use std::{collections::HashSet, fs::read_dir, io};
+use std::{collections::HashSet, fs::read_dir, io, path::PathBuf};
 
 use crate::{mode::ALL_MODES, NAME, VERSION};
 
-use super::{MECANO_DICTS_PATH, USER_DICTS_PATH};
+use super::dictionaries_path;
 
 pub fn flags(args : &Vec<String>) -> String {
     let mut flags : String = String::new();
@@ -50,8 +50,7 @@ fn list_dicts_flag() -> String {
 
     let mut all_dicts : HashSet<String> = HashSet::new();
 
-    all_dicts.extend(file_names_in_dir(USER_DICTS_PATH).unwrap_or_default());
-    all_dicts.extend(file_names_in_dir(MECANO_DICTS_PATH).unwrap_or_default());
+    all_dicts.extend(file_names_in_dir(&dictionaries_path()).unwrap_or_default());
 
     let mut all_dicts : Vec<String> = all_dicts.into_iter().collect();
 
@@ -69,7 +68,7 @@ fn list_dicts_flag() -> String {
     return list_dicts_msg;
 }
 
-fn file_names_in_dir(path : &str) -> io::Result<HashSet<String>> {
+fn file_names_in_dir(path : &PathBuf) -> io::Result<HashSet<String>> {
     let mut set : HashSet<String> = HashSet::new();
     for file in read_dir(path)? {
         let file = file?;
@@ -78,8 +77,9 @@ fn file_names_in_dir(path : &str) -> io::Result<HashSet<String>> {
             let file_name = file_name.to_str().unwrap_or("\0");
             set.insert(file_name.to_string());
         } else if file.file_type()?.is_dir() {
-            let inner_set = file_names_in_dir(file.file_name().to_str().unwrap_or("\0"));
-            set.extend(inner_set.unwrap_or_default());
+            // TO DO : 
+            // let inner_set = file_names_in_dir(file.file_name().to_str().unwrap_or("\0"));
+            // set.extend(inner_set.unwrap_or_default());
         }
     }
     return Ok(set);

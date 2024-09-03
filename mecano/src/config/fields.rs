@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use serde::{de::Visitor, Deserialize};
 
 use crate::{mode::{all_modes_str, ALL_MODES}, path_to_file};
@@ -87,20 +89,24 @@ impl<'de> Visitor<'de> for ModeFieldVisitor {
 
 #[derive(Debug, Clone)]
 pub struct FileField {
-    field : String,
+    field : PathBuf,
 }
 
 impl FileField {
     pub fn new(s : &str) -> Result<FileField, FieldError> { 
-        if let Ok(path) = path_to_file(s) {
-            return Ok(FileField{ field : path.to_string() });
+        let result = path_to_file(s);
+        if let Ok(path) = result {
+            return Ok(FileField{ field : path });
         } else {
+            dbg!("Failed FileField::new()");
+            let _ = result.inspect_err(|e| eprintln!("{}", e.kind()));
             return Err(FieldError::InvalidFile);
         }
     }
-    
-    pub fn to_string(&self) -> String {
-        return self.field.clone();
+
+    pub fn get_pathbuf(&self) -> &PathBuf {
+        return &self.field;
+
     }
 }
 
