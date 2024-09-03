@@ -39,7 +39,6 @@ FLAGS:
 ## Configuration
 
 You can change some default values like the theme, the time or some starting values at `~/.config/mecano/config.toml`.
-The default configuration is in `/usr/share/mecano/config.toml`.
 
 ```toml
 # Maximum width of each line
