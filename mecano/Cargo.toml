@@ -7,9 +7,12 @@ authors = [ "alvarojsino813" ]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-mecano-macros = { path = "../mecano-macros" }
 crossterm = { version = "0.27.0", features = ["serde"] }
-toml = "0.8.14"
 serde = { version = "1.0.203", features = ["derive"] }
+toml = "0.8.14"
+dirs = { version = "5.0.1" }
 rand = "0.8.0"
 constcat = { version = "0.5.0" }
+
+[build-dependencies]
+dirs = { version = "5.0.1" }
