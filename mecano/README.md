@@ -8,9 +8,27 @@ A minimalist typing test.
 
 You can install it with any AUR package manager, like yay:
 
+### AUR
+
 ```bash
 yay -Sy mecano
 ```
+
+### Cargo
+
+```bash
+cargo install mecano
+```
+
+This way the executable will be installed at `~/.cargo/bin/mecano`.
+
+You can add that path to your paths. Example for linux:
+
+`.bashrc`
+```bash
+export PATH="$HOME/.cargo/bin:$PATH"
+```
+
 
 ## Usage
 
