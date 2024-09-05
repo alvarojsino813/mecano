@@ -17,10 +17,12 @@ use crossterm::{
 use super::TermUnit;
 
 use crate::{
-    config::Config, 
-    mode::{SourceDictionary, SourceFile, WordSource}, 
+    config::Config,
+    frames::title_frame::Title,
+    frames::textbox::Text,
+    frames::Frameable,
+    mode::{SourceDictionary, SourceFile, WordSource},
     punctuation::Punct,
-    textbox::Text
 };
 
 #[derive(Debug)]
@@ -226,7 +228,7 @@ impl Mecano {
         if let Ok(box_info) = BoxInfo::centered(self.width, real_size) {
             self.box_info = box_info;
             self.textbox.set_size((self.box_info.width, self.lines_to_show()));
-            self.textbox.set_column(self.box_info.left_padding);
+            self.textbox.set_pos((self.box_info.left_padding, self.box_info.top_padding));
 
             if self.is_ended() { 
                 self.engine = Engine::ShowPunct;
@@ -264,7 +266,8 @@ impl Mecano {
 
     // TO DO : Add controls information for size
     fn draw_ready(&mut self) -> io::Result<()> {
-        return self.draw_playing();
+        self.draw_playing()?;
+        return Ok(());
     }
 
     fn draw_playing(&mut self) -> io::Result<()> {
@@ -276,6 +279,8 @@ impl Mecano {
         self.go_to_input_beginning()?;
         let word = &self.typed_word;
         write!(stdout(), "{word}")?;
+        let title = Title::new((4, 4), (60, 9));
+        write!(stdout(), "{title}")?;
         stdout().flush()?;
 
         return Ok(());

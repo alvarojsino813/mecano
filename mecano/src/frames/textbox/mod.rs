@@ -13,12 +13,10 @@ use crossterm::{
 
 use self::word::StatefulChar;
 
-use super::{Count, Idx, TermUnit};
+use crate::{Count, Idx, TermUnit};
 
 use crate::{
-    config::Theme, 
-    punctuation::Punct,
-    mode::WordSource,
+    config::Theme, frames::Frameable, mode::WordSource, punctuation::Punct
 };
 
 use word::Word;
@@ -42,7 +40,7 @@ pub struct Text {
     total_chars_to_show : Count,
     theme : Theme,
     size : (TermUnit, TermUnit),
-    column : TermUnit,
+    pos : (TermUnit, TermUnit),
     total_duration : Duration,
     last_key_duration : Duration,
 }
@@ -65,7 +63,7 @@ impl Text {
             total_chars_to_show : 0,
             theme: config,
             size, 
-            column : 0,
+            pos : (0, 0),
             total_duration : dur,
             last_key_duration : Duration::ZERO,
         };
@@ -75,25 +73,6 @@ impl Text {
             w.select();
         }
         return textbox;
-    }
-
-    fn print_word(&self, word : &Word, max_width : TermUnit) -> io::Result<TermUnit> {
-        return print_word(&self.theme, word, max_width);
-    }
-
-    fn print_selected_word(&self) -> io::Result<TermUnit> {
-        self.go_to_selected_word()?;
-        let result = self.print_word(
-            &self.words[self.selected_word], 
-            self.get_size_x() - self.line_chars
-        );
-        return result;
-    }
-
-
-    fn go_to_selected_word(&self) -> io::Result<()> {
-        return queue!(stdout()
-            ,MoveToColumn(self.column + self.line_chars as TermUnit));
     }
 
     pub fn type_char(&mut self, c : char) -> io::Result<()> {
@@ -112,34 +91,6 @@ impl Text {
 
         if c.is_whitespace() {
             self.next_word()?;
-        }
-
-        return Ok(());
-    }
-
-    fn next_word(&mut self) -> io::Result<()> {
-        // Unselect actual word
-        self.words[self.selected_word].unselect();
-        self.print_selected_word()?;
-
-        // Update internal state
-        let n_word_chars = self.words[self.selected_word].n_chars_and_extra();
-        self.total_chars_to_show -= (n_word_chars + 1) as Count;
-        self.line_chars += n_word_chars + 1;
-
-        // Select next word
-        self.selected_word += 1;
-        self.words[self.selected_word].select();
-
-        // Checks if next line
-        let n_word_chars = self.words[self.selected_word].n_chars_and_extra(); 
-        if self.get_size_x() <= self.line_chars + n_word_chars {
-            self.word_print_offset = self.selected_word;
-            self.line_chars = 0;
-            self.complete_size();
-            write!(stdout(), "{self}")?;
-        } else {
-            self.print_selected_word()?;
         }
 
         return Ok(());
@@ -179,6 +130,54 @@ impl Text {
         return punct;
     }
 
+    fn print_word(&self, word : &Word, max_width : TermUnit) -> io::Result<TermUnit> {
+        return print_word(&self.theme, word, max_width);
+    }
+
+    fn print_selected_word(&self) -> io::Result<TermUnit> {
+        self.go_to_selected_word()?;
+        let result = self.print_word(
+            &self.words[self.selected_word], 
+            self.get_size_x() - self.line_chars
+        );
+        return result;
+    }
+
+
+    fn go_to_selected_word(&self) -> io::Result<()> {
+        return queue!(stdout()
+            ,MoveToColumn(self.pos.0 + self.line_chars as TermUnit));
+    }
+
+    fn next_word(&mut self) -> io::Result<()> {
+        // Unselect actual word
+        self.words[self.selected_word].unselect();
+        self.print_selected_word()?;
+
+        // Update internal state
+        let n_word_chars = self.words[self.selected_word].n_chars_and_extra();
+        self.total_chars_to_show -= (n_word_chars + 1) as Count;
+        self.line_chars += n_word_chars + 1;
+
+        // Select next word
+        self.selected_word += 1;
+        self.words[self.selected_word].select();
+
+        // Checks if next line
+        let n_word_chars = self.words[self.selected_word].n_chars_and_extra(); 
+        if self.get_size_x() <= self.line_chars + n_word_chars {
+            self.word_print_offset = self.selected_word;
+            self.line_chars = 0;
+            self.complete_size();
+            write!(stdout(), "{self}")?;
+        } else {
+            self.print_selected_word()?;
+        }
+
+        return Ok(());
+    }
+
+
     fn complete_size(&mut self) {
         while self.total_chars_to_show < (self.get_size_x() * self.get_size_y()) as Count {
             let new_word = self.words_source.yield_word();
@@ -186,24 +185,30 @@ impl Text {
             self.words.push(Word::from_str(new_word));
         }
     }
+}
 
-    fn get_size_x(&self) -> TermUnit { return self.size.0; }
+impl Frameable for Text {
+    fn get_size(&self) -> (TermUnit, TermUnit) {
+        return self.size;
+    }
 
-    fn get_size_y(&self) -> TermUnit { return self.size.1; }
-
-    pub fn set_size(&mut self, size : (TermUnit, TermUnit)) {
+    fn set_size(&mut self, size : (TermUnit, TermUnit)) {
         self.size = size;
         self.complete_size();
     }
 
-    pub fn set_column(&mut self, column : TermUnit) { self.column = column; }
+    fn get_pos(&self) -> (TermUnit, TermUnit) {
+        return self.pos;
+    }
+
+    fn set_pos(&mut self, pos : (TermUnit, TermUnit)) {
+        self.pos = pos;
+    }
 }
-
-
 
 impl Display for Text {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let go_to_column = MoveToColumn(self.column);
+        let go_to_column = MoveToColumn(self.pos.0);
         write!(f, "{go_to_column}")?;
 
         // Clean textbox stdout buffer

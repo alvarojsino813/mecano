@@ -9,10 +9,10 @@ use std::path::PathBuf;
 use cli::dictionaries_path;
 
 pub mod engine;
+pub mod frames;
 pub mod config;
 pub mod mode;
 pub mod cli;
-pub mod textbox;
 pub mod punctuation;
 
 pub type Idx = usize;
