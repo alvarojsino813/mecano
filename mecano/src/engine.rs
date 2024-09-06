@@ -553,7 +553,7 @@ impl Drop for Mecano {
 
 #[cfg(test)]
 mod test {
-    use std::{io::{stdout, Write}, thread, time::Duration};
+    use std::{io::{stdout, Write}, thread, time::{Duration, Instant}};
 
     use crossterm::event::{poll, KeyCode, KeyEvent, KeyModifiers};
 
@@ -679,7 +679,7 @@ mod test {
             text.push(' ');
         }
 
-        let mut iter = text.chars();
+        let mut iter = text.chars().cycle();
 
         let frame_duration = Duration::from_millis(100);
 
@@ -689,10 +689,7 @@ mod test {
                 break;
             }
 
-            let c = iter.next().unwrap_or_else(|| {
-                iter = text.chars();
-                return iter.next().unwrap();
-            });
+            let c = iter.next().unwrap_or('\0');
 
             let keyevent = 
                 KeyEvent::new(KeyCode::Char(c), KeyModifiers::empty());
@@ -701,6 +698,44 @@ mod test {
 
             let _ = state.update_time(frame_duration);
         }
+    }
 
+    #[test]
+    fn game_100000_secs() {
+        let mut config = Config::max_time();
+        config.set_max_time(100000);
+        let mut state = Mecano::new(config).unwrap();
+        let _ = state.draw();
+
+        let find_path_to_file = path_to_file("100_english").unwrap();
+        let contents = std::fs::read_to_string(find_path_to_file)
+            .unwrap();
+        let mut text : String = String::new();
+        for word in contents.split_whitespace() {
+            text.push_str(word);
+            text.push(' ');
+        }
+
+        let mut iter = text.chars().cycle();
+
+        let frame_duration = Duration::from_millis(100);
+
+        while !state.is_ended()  {
+
+            if let Ok(true) = poll(Duration::ZERO) {
+                break;
+            }
+
+            let c = iter.next().unwrap_or('\0');
+
+            let keyevent = 
+            KeyEvent::new(KeyCode::Char(c), KeyModifiers::empty());
+
+            let _ = state.type_key_event(keyevent);
+
+            let _ = state.update_time(frame_duration);
+        }
+
+        let _ = state.draw();
     }
 }
